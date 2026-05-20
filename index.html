@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Шахматка встреч</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f3;color:#1a1a1a;font-size:13px}
+
+/* ── Топбар ── */
+.topbar{background:#fff;border-bottom:1px solid #e5e5e2;padding:10px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;position:sticky;top:0;z-index:10}
+.topbar strong{font-size:15px;font-weight:600}
+.divider{width:1px;height:20px;background:#e5e5e2}
+.tab-group{display:flex;gap:3px}
+.tab-btn{padding:5px 14px;border:1px solid #ddd;border-radius:6px;background:#f5f5f3;font-size:12px;cursor:pointer;color:#555;transition:all .15s}
+.tab-btn.active{background:#1a1a1a;color:#fff;border-color:#1a1a1a}
+.tab-btn.product-btn.active-acc{background:#185FA5;border-color:#185FA5;color:#fff}
+.tab-btn.product-btn.active-plat{background:#7B3FB5;border-color:#7B3FB5;color:#fff}
+input[type=date]{font-size:12px;padding:5px 8px;border:1px solid #ddd;border-radius:6px;height:30px}
+.btn-refresh{padding:5px 12px;border:1px solid #ddd;border-radius:6px;background:#fff;font-size:12px;cursor:pointer}
+.btn-refresh:hover{background:#f0f0ee}
+.status-bar{font-size:11px;color:#888;margin-left:auto}
+.status-bar.error{color:#c0392b}.status-bar.loading{color:#2980b9}
+
+/* ── Сетка ── */
+.main{padding:12px 16px}
+.grid-wrap{overflow-x:auto;border-radius:8px;border:1px solid #e5e5e2;background:#fff}
+table{border-collapse:collapse;min-width:100%}
+thead th{background:#fafaf8;font-weight:500;font-size:11px;color:#666;padding:7px 6px;white-space:nowrap;border-bottom:1px solid #e5e5e2;border-right:1px solid #e5e5e2;text-align:center}
+thead th.mgr-h{text-align:left;min-width:130px;position:sticky;left:0;z-index:3;background:#fafaf8}
+td.mgr-cell{background:#fafaf8;font-size:12px;font-weight:500;padding:6px 10px;border-bottom:1px solid #e5e5e2;border-right:1px solid #e5e5e2;white-space:nowrap;position:sticky;left:0;z-index:1;min-width:130px}
+td.slot{width:80px;min-width:80px;height:42px;border-bottom:1px solid #e5e5e2;border-right:1px solid #e5e5e2;vertical-align:middle;text-align:center;cursor:pointer}
+td.slot.empty:hover{background:#f0f0ee}
+.cell{font-size:10px;padding:2px 5px;border-radius:4px;display:inline-block;max-width:74px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#fff;line-height:1.5}
+.s-assigned{background:#888780}
+.s-confirmed{background:#1D9E75}
+.s-done{background:#3B6D11}
+.s-moved{background:#BA7517}
+.s-cancel{background:#c0392b}
+.s-own{background:#185FA5}
+
+/* ── Легенда ── */
+.legend{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0}
+.leg{display:flex;align-items:center;gap:4px;font-size:11px;color:#555}
+.leg-dot{width:10px;height:10px;border-radius:2px;flex-shrink:0}
+
+/* ── Аналитика ── */
+.section-title{font-size:13px;font-weight:600;margin-bottom:8px;margin-top:16px;display:flex;align-items:center;gap:8px}
+.product-badge{font-size:11px;font-weight:500;padding:2px 10px;border-radius:20px;color:#fff}
+.badge-acc{background:#185FA5}
+.badge-plat{background:#7B3FB5}
+.analytics{background:#fff;border-radius:8px;border:1px solid #e5e5e2;overflow:hidden}
+.an-table{width:100%;border-collapse:collapse}
+.an-table th{background:#fafaf8;padding:8px 12px;text-align:left;border-bottom:1px solid #e5e5e2;font-weight:500;font-size:11px;color:#666;white-space:nowrap}
+.an-table th.right{text-align:right}
+.an-table td{padding:8px 12px;border-bottom:1px solid #f0f0ee;font-size:12px}
+.an-table td.right{text-align:right}
+.an-table tr:last-child td{border-bottom:none}
+.an-table tr:hover td{background:#fafaf8}
+.an-table .total-row td{font-weight:600;background:#fafaf8;border-top:1px solid #e5e5e2}
+.cr-good{color:#3B6D11;font-weight:600}
+.cr-mid{color:#BA7517;font-weight:600}
+.cr-low{color:#c0392b;font-weight:600}
+.moved-count{color:#BA7517;font-weight:500}
+
+/* ── Модалка ── */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:100;align-items:flex-start;justify-content:center;padding-top:60px}
+.modal-bg.open{display:flex}
+.modal{background:#fff;border-radius:10px;padding:20px;width:360px;max-width:95vw;box-shadow:0 8px 32px rgba(0,0,0,.15)}
+.modal h3{font-size:14px;font-weight:600;margin-bottom:14px}
+.field{margin-bottom:10px}
+.field label{display:block;font-size:11px;color:#888;margin-bottom:3px}
+.field select,.field input{width:100%;padding:6px 9px;border:1px solid #ddd;border-radius:6px;font-size:12px;height:32px}
+.modal-btns{display:flex;gap:8px;margin-top:16px;justify-content:flex-end}
+.btn-save{background:#1a1a1a;color:#fff;border:none;padding:6px 18px;border-radius:6px;font-size:12px;cursor:pointer}
+.btn-save:disabled{background:#aaa;cursor:not-allowed}
+.btn-cancel-m{background:#fff;color:#555;border:1px solid #ddd;padding:6px 14px;border-radius:6px;font-size:12px;cursor:pointer}
+.btn-del{background:#fff;color:#c0392b;border:1px solid #e5a5a5;padding:6px 14px;border-radius:6px;font-size:12px;cursor:pointer}
+
+/* ── Debug ── */
+.debug-box{margin-top:12px;background:#fff;border:1px solid #e5e5e2;border-radius:8px;padding:10px 14px;font-size:11px;color:#666;line-height:1.8;display:none}
+.loader{text-align:center;padding:40px;color:#aaa}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <strong>Шахматка встреч</strong>
+
+  <div class="divider"></div>
+
+  <!-- Переключатель продукта -->
+  <div class="tab-group" id="product-tabs">
+    <button class="tab-btn product-btn active-acc" id="btn-acc" onclick="setProduct('accounting',this)">Аккаунтинг</button>
+    <button class="tab-btn product-btn" id="btn-plat" onclick="setProduct('platform',this)">Платформа</button>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- Период -->
+  <div class="tab-group">
+    <button class="tab-btn active" onclick="setPeriod('day',this)">День</button>
+    <button class="tab-btn" onclick="setPeriod('week',this)">Неделя</button>
+  </div>
+  <input type="date" id="date-pick" onchange="renderAll()">
+  <button class="btn-refresh" onclick="loadData()">↻ Обновить</button>
+  <span class="status-bar" id="status">Загрузка...</span>
+</div>
+
+<div class="main">
+  <div class="grid-wrap">
+    <div id="grid-loader" class="loader">Загружаем данные из Б24...</div>
+    <table id="grid" style="display:none"></table>
+  </div>
+
+  <div class="legend">
+    <div class="leg"><div class="leg-dot" style="background:#888780"></div>Назначена (ТМ)</div>
+    <div class="leg"><div class="leg-dot" style="background:#185FA5"></div>Своя</div>
+    <div class="leg"><div class="leg-dot" style="background:#1D9E75"></div>Подтверждена</div>
+    <div class="leg"><div class="leg-dot" style="background:#3B6D11"></div>Проведена</div>
+    <div class="leg"><div class="leg-dot" style="background:#BA7517"></div>Перенесена</div>
+    <div class="leg"><div class="leg-dot" style="background:#c0392b"></div>Отмена</div>
+  </div>
+
+  <div class="section-title">
+    Аналитика за период
+    <span class="product-badge" id="analytics-badge">Аккаунтинг</span>
+  </div>
+  <div class="analytics">
+    <table class="an-table">
+      <thead><tr>
+        <th>Менеджер ОП</th>
+        <th class="right">От ТМ</th>
+        <th class="right">Свои</th>
+        <th class="right">Всего</th>
+        <th class="right">Проведено</th>
+        <th class="right">Переносов</th>
+        <th class="right">CR %</th>
+      </tr></thead>
+      <tbody id="analytics-body">
+        <tr><td colspan="7" style="text-align:center;color:#aaa;padding:16px">Загрузка...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="debug-box" id="debug-box"></div>
+</div>
+
+<!-- Модалка создания/редактирования встречи -->
+<div class="modal-bg" id="modal-bg">
+  <div class="modal">
+    <h3 id="modal-title">Новая встреча</h3>
+
+    <div class="field">
+      <label>Продукт</label>
+      <select id="m-product">
+        <option value="accounting">Аккаунтинг</option>
+        <option value="platform">Платформа</option>
+      </select>
+    </div>
+    <div class="field"><label>Менеджер ОП</label><select id="m-mgr"></select></div>
+    <div class="field"><label>Дата и время</label><input type="datetime-local" id="m-datetime"></div>
+    <div class="field">
+      <label>Источник назначения</label>
+      <select id="m-source" onchange="toggleTM()">
+        <option value="tm">ТМ (телемаркетолог)</option>
+        <option value="own">Своя (менеджер ОП)</option>
+      </select>
+    </div>
+    <div class="field" id="tm-field">
+      <label>Телемаркетолог</label>
+      <select id="m-tm"></select>
+    </div>
+    <div class="field"><label>Клиент / Компания</label><input type="text" id="m-client" placeholder="Название компании"></div>
+    <div class="field">
+      <label>Статус встречи</label>
+      <select id="m-status">
+        <option value="assigned">Назначена</option>
+        <option value="confirmed">Подтверждена (Согласование)</option>
+        <option value="done">Проведена (Успех)</option>
+        <option value="moved">Перенесена</option>
+        <option value="cancel">Отмена (Провал)</option>
+      </select>
+    </div>
+
+    <div class="modal-btns">
+      <button class="btn-del" id="btn-del" style="display:none" onclick="deleteEntry()">Удалить</button>
+      <button class="btn-cancel-m" onclick="closeModal()">Отмена</button>
+      <button class="btn-save" id="btn-save" onclick="saveEntry()">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════
+//  КОНФИГ
+// ════════════════════════════════════════════════
+const B24   = 'https://crm.seller24.ru/rest/5/lugy1ou7q1i8h1zm/';
+const ETYPE = 1036;
+
+const F = {
+  date    : 'ufCrm11MeetingDate',    // datetime
+  source  : 'ufCrm11Source',         // enumeration — ТМ/Менеджер ОП
+  tm      : 'ufCrm11_1779109467',    // employee — Кто из ТМ назначил
+  client  : 'ufCrm11_1779109488',    // string — Название клиента
+  manager : 'ufCrm11_1779109498',    // employee — Менеджер ОП
+
+  // ⚠️ ЗАГЛУШКА — замените на реальный код после создания поля в Б24
+  // Откройте crm.item.fields?entityTypeId=1036 и найдите поле "Продукт"
+  product : 'ufCrm11_1779299333',    // enumeration — Аккаунтинг/Платформа
+};
+
+// ID значений поля product (enumeration) — заполните после создания поля
+// Пример: {accounting: 123, platform: 124}
+const PRODUCT_IDS = {
+  accounting : 5302, // Аккаунтинг
+  platform   : 5303, // Платформа
+};
+
+// Реальные стадии (из crm.status.list → DYNAMIC_1036_STAGE_19)
+const STAGES = {
+  assigned  : 'DT1036_19:NEW',         // Назначена
+  moved     : 'DT1036_19:PREPARATION', // Перенос встречи
+  confirmed : 'DT1036_19:CLIENT',      // Согласование
+  done      : 'DT1036_19:SUCCESS',     // Успех / Проведена
+  cancel    : 'DT1036_19:FAIL',        // Провал / Отмена
+};
+const STAGE_KEY = Object.fromEntries(Object.entries(STAGES).map(([k,v])=>[v,k]));
+
+const SLOTS = ['9:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00'];
+const CSS   = {assigned:'s-assigned',confirmed:'s-confirmed',done:'s-done',moved:'s-moved',cancel:'s-cancel',own:'s-own'};
+
+// ════════════════════════════════════════════════
+//  СОСТОЯНИЕ
+// ════════════════════════════════════════════════
+let period      = 'day';
+let currentDate = new Date();
+let currentProduct = 'accounting'; // 'accounting' | 'platform'
+let allEntries  = []; // все встречи за период (оба продукта)
+let managers    = [];
+let tms         = [];
+let editId      = null, modalMgr, modalSlot, modalDate;
+
+// ════════════════════════════════════════════════
+//  API
+// ════════════════════════════════════════════════
+async function api(method, params = {}) {
+  const r = await fetch(B24 + method, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(params),
+  });
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  const d = await r.json();
+  if (d.error) throw new Error(d.error_description || d.error);
+  return d.result;
+}
+
+// ════════════════════════════════════════════════
+//  ПОЛЬЗОВАТЕЛИ
+// ════════════════════════════════════════════════
+async function loadUsers() {
+  try {
+    const res  = await api('user.get', { filter: { ACTIVE: true }, select: ['ID','NAME','LAST_NAME'] });
+    const list = Array.isArray(res) ? res : (res.users || []);
+    const users = list.map(u => ({ id: String(u.ID), name: ((u.NAME||'')+' '+(u.LAST_NAME||'')).trim() }));
+    managers = users; tms = users;
+    log('👥 Пользователи: ' + users.length);
+  } catch (e) {
+    log('⚠️ user.get: ' + e.message + ' — пробуем через встречи');
+    await loadUsersFromEntries();
+  }
+}
+
+async function loadUsersFromEntries() {
+  try {
+    const past = new Date(); past.setDate(past.getDate() - 90);
+    const res  = await api('crm.item.list', {
+      entityTypeId: ETYPE,
+      filter: { ['>=' + F.date]: past.toISOString().slice(0,10) + 'T00:00:00' },
+      select: ['assignedById', F.manager, F.tm],
+    });
+    const ids = new Set();
+    (res.items || []).forEach(i => {
+      if (i[F.manager])   ids.add(String(i[F.manager]));
+      if (i.assignedById) ids.add(String(i.assignedById));
+    });
+    if (ids.size) {
+      try {
+        const res2  = await api('user.get', { filter: { ID: [...ids] }, select: ['ID','NAME','LAST_NAME'] });
+        const list2 = Array.isArray(res2) ? res2 : (res2.users || []);
+        const users2 = list2.map(u => ({ id: String(u.ID), name: ((u.NAME||'')+' '+(u.LAST_NAME||'')).trim() }));
+        managers = users2; tms = users2;
+        log('👥 Пользователи из встреч: ' + users2.length);
+        return;
+      } catch(e2) { log('⚠️ user.get по ID: ' + e2.message); }
+      managers = [...ids].map(id => ({ id, name: 'Менеджер ' + id }));
+      tms = managers;
+    }
+  } catch(e) {
+    log('⚠️ loadUsersFromEntries: ' + e.message);
+    managers = []; tms = [];
+  }
+}
+
+// ════════════════════════════════════════════════
+//  ВСТРЕЧИ
+// ════════════════════════════════════════════════
+async function loadEntries(from, to) {
+  try {
+    const res   = await api('crm.item.list', {
+      entityTypeId: ETYPE,
+      filter: {
+        ['>=' + F.date]: from + 'T00:00:00+03:00',
+        ['<=' + F.date]: to   + 'T23:59:59+03:00',
+      },
+      select: ['id','title','stageId','assignedById', F.date, F.source, F.tm, F.client, F.manager, F.product],
+      order:  { [F.date]: 'ASC' },
+    });
+    const items = res.items || [];
+    log('📅 Встреч загружено: ' + items.length);
+
+    return items.map(item => {
+      const dt       = item[F.date] || '';
+      const date     = dt.slice(0, 10);
+      const hh       = parseInt(dt.slice(11, 13));
+      const slot     = (isNaN(hh) ? 9 : hh) + ':00';
+      const stageKey = STAGE_KEY[item.stageId] || 'assigned';
+      const hasTM    = !!(item[F.tm]);
+      const source   = hasTM ? 'tm' : 'own';
+      const mgrId    = String(item[F.manager] || item.assignedById || '');
+
+      // Определяем продукт
+      const pVal = String(item[F.product] || '');
+      let product = 'accounting'; // дефолт
+      if (PRODUCT_IDS.platform && pVal === String(PRODUCT_IDS.platform)) product = 'platform';
+      else if (PRODUCT_IDS.accounting && pVal === String(PRODUCT_IDS.accounting)) product = 'accounting';
+      // Если поле ещё не создано — все встречи попадают в Аккаунтинг
+
+      return {
+        id: String(item.id), mgr: mgrId, date, slot,
+        source, product,
+        tm      : String(item[F.tm] || ''),
+        client  : String(item[F.client] || item.title || ''),
+        status  : stageKey,
+        stageId : item.stageId,
+      };
+    });
+  } catch (e) {
+    setStatus('Ошибка загрузки: ' + e.message, 'error');
+    log('❌ loadEntries: ' + e.message);
+    return [];
+  }
+}
+
+// ════════════════════════════════════════════════
+//  СОХРАНЕНИЕ
+// ════════════════════════════════════════════════
+async function saveEntry() {
+  const btn = document.getElementById('btn-save');
+  btn.disabled = true; btn.textContent = 'Сохранение...';
+  try {
+    const mgrId   = document.getElementById('m-mgr').value;
+    const dtVal   = document.getElementById('m-datetime').value;
+    const source  = document.getElementById('m-source').value;
+    const tmId    = document.getElementById('m-tm').value;
+    const client  = document.getElementById('m-client').value;
+    const skey    = document.getElementById('m-status').value;
+    const product = document.getElementById('m-product').value;
+
+    // Значение поля product: если ID известны — шлём число, иначе строку
+    const productVal = PRODUCT_IDS[product] || product;
+
+    const fields = {
+      title        : client || (source === 'own' ? 'Своя встреча' : 'Встреча от ТМ'),
+      assignedById : parseInt(mgrId),
+      stageId      : STAGES[skey] || STAGES.assigned,
+      [F.date]     : dtVal ? dtVal.replace('T', ' ') + ':00' : '',
+      [F.tm]       : source === 'tm' ? (parseInt(tmId) || null) : null,
+      [F.client]   : client,
+      [F.manager]  : parseInt(mgrId),
+      [F.product]  : productVal,
+    };
+
+    if (editId) {
+      await api('crm.item.update', { entityTypeId: ETYPE, id: parseInt(editId), fields });
+    } else {
+      await api('crm.item.add', { entityTypeId: ETYPE, fields });
+    }
+    closeModal();
+    await loadData();
+  } catch (e) {
+    alert('Ошибка сохранения: ' + e.message);
+    log('❌ save: ' + e.message);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Сохранить';
+  }
+}
+
+async function deleteEntry() {
+  if (!confirm('Удалить встречу?')) return;
+  try {
+    await api('crm.item.delete', { entityTypeId: ETYPE, id: parseInt(editId) });
+    closeModal(); await loadData();
+  } catch (e) { alert('Ошибка: ' + e.message); }
+}
+
+// ════════════════════════════════════════════════
+//  РЕНДЕР СЕТКИ
+// ════════════════════════════════════════════════
+function dateKey(d)    { return d.toISOString().slice(0, 10); }
+function addDays(d, n) { const r = new Date(d); r.setDate(r.getDate() + n); return r; }
+function fmtDay(d)     { return ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'][d.getDay()]; }
+function fmtDate(d)    { return d.toLocaleDateString('ru-RU', { day:'2-digit', month:'2-digit' }); }
+
+function getDates() {
+  if (period === 'day') return [new Date(currentDate)];
+  const s = new Date(currentDate), dow = s.getDay();
+  s.setDate(s.getDate() + (dow === 0 ? -6 : 1 - dow));
+  return Array.from({ length: 5 }, (_, i) => addDays(s, i));
+}
+
+// Только встречи текущего продукта
+function getEntries() {
+  return allEntries.filter(e => e.product === currentProduct);
+}
+
+function uname(id, list) {
+  const u = list.find(m => m.id === String(id));
+  return u ? u.name : (id ? 'ID ' + id : '—');
+}
+
+function renderGrid() {
+  const dates   = getDates();
+  const entries = getEntries();
+  document.getElementById('grid-loader').style.display = 'none';
+  const tbl = document.getElementById('grid'); tbl.style.display = '';
+
+  let html = '<thead><tr><th class="mgr-h">Менеджер ОП</th>';
+  if (period === 'day') {
+    SLOTS.forEach(s => html += `<th>${s}</th>`);
+  } else {
+    dates.forEach(d => SLOTS.forEach(s =>
+      html += `<th style="min-width:68px">${fmtDay(d)} ${fmtDate(d)}<br><span style="font-weight:400;font-size:10px">${s}</span></th>`
+    ));
+  }
+  html += '</tr></thead><tbody>';
+
+  managers.forEach(mgr => {
+    html += `<tr><td class="mgr-cell">${mgr.name}</td>`;
+    const dsArr = period === 'day' ? [dateKey(dates[0])] : dates.map(dateKey);
+    dsArr.forEach(ds => {
+      SLOTS.forEach(sl => {
+        const e = entries.find(x => x.mgr === mgr.id && x.date === ds && x.slot === sl);
+        if (!e) {
+          html += `<td class="slot empty" onclick="openModal(null,'${mgr.id}','${sl}','${ds}')"></td>`;
+        } else {
+          const css = CSS[e.source === 'own' ? 'own' : e.status] || 's-assigned';
+          const lbl = e.client || uname(e.tm, tms) || e.status;
+          html += `<td class="slot" onclick="openModal('${e.id}','${mgr.id}','${sl}','${ds}')"><span class="cell ${css}" title="${lbl}">${lbl}</span></td>`;
+        }
+      });
+    });
+    html += '</tr>';
+  });
+  tbl.innerHTML = html + '</tbody>';
+}
+
+// ════════════════════════════════════════════════
+//  АНАЛИТИКА (с переносами)
+// ════════════════════════════════════════════════
+function renderAnalytics() {
+  const ds      = getDates().map(dateKey);
+  const entries = getEntries();
+  let html = '', totTM = 0, totOwn = 0, totAll = 0, totDone = 0, totMoved = 0;
+
+  managers.forEach(mgr => {
+    const es    = entries.filter(e => e.mgr === mgr.id && ds.includes(e.date));
+    const tm    = es.filter(e => e.source === 'tm').length;
+    const own   = es.filter(e => e.source === 'own').length;
+    const total = tm + own;
+    const done  = es.filter(e => e.status === 'done').length;
+    const moved = es.filter(e => e.status === 'moved').length;
+    const cr    = total > 0 ? Math.round(done / total * 100) : -1;
+    const crCls = cr >= 75 ? 'cr-good' : cr >= 50 ? 'cr-mid' : 'cr-low';
+
+    totTM += tm; totOwn += own; totAll += total; totDone += done; totMoved += moved;
+
+    html += `<tr>
+      <td>${mgr.name}</td>
+      <td class="right">${tm}</td>
+      <td class="right">${own}</td>
+      <td class="right">${total}</td>
+      <td class="right">${done}</td>
+      <td class="right ${moved > 0 ? 'moved-count' : ''}">${moved > 0 ? moved : '—'}</td>
+      <td class="right ${crCls}">${cr >= 0 ? cr + '%' : '—'}</td>
+    </tr>`;
+  });
+
+  // Итоговая строка
+  const totCR  = totAll > 0 ? Math.round(totDone / totAll * 100) : -1;
+  const totCls = totCR >= 75 ? 'cr-good' : totCR >= 50 ? 'cr-mid' : 'cr-low';
+  html += `<tr class="total-row">
+    <td>Итого</td>
+    <td class="right">${totTM}</td>
+    <td class="right">${totOwn}</td>
+    <td class="right">${totAll}</td>
+    <td class="right">${totDone}</td>
+    <td class="right ${totMoved > 0 ? 'moved-count' : ''}">${totMoved > 0 ? totMoved : '—'}</td>
+    <td class="right ${totCls}">${totCR >= 0 ? totCR + '%' : '—'}</td>
+  </tr>`;
+
+  if (!managers.length) html = '<tr><td colspan="7" style="text-align:center;color:#aaa;padding:16px">Нет данных</td></tr>';
+  document.getElementById('analytics-body').innerHTML = html;
+}
+
+// ════════════════════════════════════════════════
+//  МОДАЛКА
+// ════════════════════════════════════════════════
+function openModal(id, mgrId, slot, date) {
+  editId = id; modalMgr = mgrId; modalSlot = slot; modalDate = date;
+  document.getElementById('m-mgr').innerHTML = managers.map(m =>
+    `<option value="${m.id}"${m.id === String(mgrId) ? ' selected' : ''}>${m.name}</option>`
+  ).join('');
+  document.getElementById('m-tm').innerHTML = tms.map(t =>
+    `<option value="${t.id}">${t.name}</option>`
+  ).join('');
+  document.getElementById('m-datetime').value = date + 'T' + slot.slice(0, 5);
+  document.getElementById('m-product').value = currentProduct;
+  document.getElementById('modal-title').textContent = id ? 'Редактировать встречу' : 'Новая встреча';
+  document.getElementById('btn-del').style.display = id ? 'block' : 'none';
+
+  if (id) {
+    const e = allEntries.find(x => x.id === id);
+    if (e) {
+      document.getElementById('m-source').value  = e.source === 'own' ? 'own' : 'tm';
+      document.getElementById('m-client').value  = e.client || '';
+      document.getElementById('m-status').value  = e.status || 'assigned';
+      document.getElementById('m-product').value = e.product || 'accounting';
+      if (e.tm) document.getElementById('m-tm').value = e.tm;
+    }
+  } else {
+    document.getElementById('m-source').value = 'tm';
+    document.getElementById('m-client').value = '';
+    document.getElementById('m-status').value = 'assigned';
+  }
+  toggleTM();
+  document.getElementById('modal-bg').classList.add('open');
+}
+
+function toggleTM() {
+  document.getElementById('tm-field').style.display =
+    document.getElementById('m-source').value === 'own' ? 'none' : 'block';
+}
+function closeModal() { document.getElementById('modal-bg').classList.remove('open'); }
+document.getElementById('modal-bg').addEventListener('click', e => { if (e.target === e.currentTarget) closeModal(); });
+
+// ════════════════════════════════════════════════
+//  ПЕРЕКЛЮЧАТЕЛИ
+// ════════════════════════════════════════════════
+function setProduct(prod, el) {
+  currentProduct = prod;
+  // Кнопки
+  document.getElementById('btn-acc').className  = 'tab-btn product-btn' + (prod === 'accounting' ? ' active-acc' : '');
+  document.getElementById('btn-plat').className = 'tab-btn product-btn' + (prod === 'platform'   ? ' active-plat' : '');
+  // Бейдж аналитики
+  const badge = document.getElementById('analytics-badge');
+  badge.textContent = prod === 'accounting' ? 'Аккаунтинг' : 'Платформа';
+  badge.className   = 'product-badge ' + (prod === 'accounting' ? 'badge-acc' : 'badge-plat');
+  renderGrid(); renderAnalytics();
+}
+
+function setPeriod(p, el) {
+  period = p;
+  document.querySelectorAll('.tab-group .tab-btn:not(.product-btn)').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  renderAll();
+}
+
+// ════════════════════════════════════════════════
+//  ЗАГРУЗКА
+// ════════════════════════════════════════════════
+function setStatus(msg, type = '') {
+  const el = document.getElementById('status');
+  el.textContent = msg;
+  el.className   = 'status-bar' + (type ? ' ' + type : '');
+}
+
+function log(msg) {
+  const b = document.getElementById('debug-box');
+  b.style.display = 'block';
+  b.innerHTML += msg + '<br>';
+}
+
+async function loadData() {
+  setStatus('Загрузка...', 'loading');
+  document.getElementById('grid-loader').style.display = 'block';
+  document.getElementById('grid').style.display = 'none';
+  document.getElementById('debug-box').innerHTML = '';
+
+  await loadUsers();
+  const dates = getDates();
+  allEntries  = await loadEntries(dateKey(dates[0]), dateKey(dates[dates.length - 1]));
+  setStatus('Обновлено ' + new Date().toLocaleTimeString('ru-RU'));
+  renderGrid(); renderAnalytics();
+}
+
+function renderAll() {
+  const dp = document.getElementById('date-pick');
+  if (dp.value) currentDate = new Date(dp.value + 'T12:00:00');
+  loadData();
+}
+
+// ════════════════════════════════════════════════
+//  СТАРТ
+// ════════════════════════════════════════════════
+document.getElementById('date-pick').value = dateKey(currentDate);
+loadData();
+</script>
+</body>
+</html>
