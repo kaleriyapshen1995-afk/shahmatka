@@ -112,7 +112,7 @@ td.slot.empty:hover{background:#f0f0ee}
     <span style="font-size:12px;color:#888">—</span>
     <input type="date" id="date-to" onchange="onRangeChange()">
   </div>
-  <button class="btn-refresh" onclick="loadData()">↻ Обновить</button>
+  <button class="btn-refresh" onclick="loadData(true)">↻ Обновить</button>
   <span class="status-bar" id="status">Загрузка...</span>
 </div>
 
@@ -334,8 +334,8 @@ async function loadEntries(from, to) {
     const res   = await api('crm.item.list', {
       entityTypeId: ETYPE,
       filter: {
-        ['>=' + F.date]: from + 'T00:00:00+03:00',
-        ['<=' + F.date]: to   + 'T23:59:59+03:00',
+        ['>=' + F.date]: from + 'T00:00:00',
+        ['<=' + F.date]: to   + 'T23:59:59',
       },
       select: ['id','title','stageId','assignedById', F.date, F.source, F.tm, F.client, F.manager, F.product],
       order:  { [F.date]: 'ASC' },
@@ -688,13 +688,20 @@ function log(msg) {
   b.innerHTML += msg + '<br>';
 }
 
-async function loadData() {
+let usersLoaded = false;
+
+async function loadData(forceReloadUsers = false) {
   setStatus('Загрузка...', 'loading');
   document.getElementById('grid-loader').style.display = 'block';
   document.getElementById('grid').style.display = 'none';
   document.getElementById('debug-box').innerHTML = '';
 
-  await loadUsers();
+  // Загружаем пользователей только один раз (или при явном сбросе)
+  if (!usersLoaded || forceReloadUsers) {
+    await loadUsers();
+    usersLoaded = true;
+  }
+
   const dates = getDates();
   allEntries  = await loadEntries(dateKey(dates[0]), dateKey(dates[dates.length - 1]));
   setStatus('Обновлено ' + new Date().toLocaleTimeString('ru-RU'));
