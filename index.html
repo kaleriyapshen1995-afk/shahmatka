@@ -99,11 +99,19 @@ td.slot.empty:hover{background:#f0f0ee}
   <div class="divider"></div>
 
   <!-- Период -->
-  <div class="tab-group">
+  <div class="tab-group" id="period-tabs">
     <button class="tab-btn active" onclick="setPeriod('day',this)">День</button>
     <button class="tab-btn" onclick="setPeriod('week',this)">Неделя</button>
+    <button class="tab-btn" onclick="setPeriod('month',this)">Месяц</button>
+    <button class="tab-btn" onclick="setPeriod('quarter',this)">Квартал</button>
+    <button class="tab-btn" onclick="setPeriod('range',this)">Диапазон</button>
   </div>
-  <input type="date" id="date-pick" onchange="renderAll()">
+  <input type="date" id="date-pick" onchange="onDateChange()">
+  <div id="range-inputs" style="display:none;gap:6px;align-items:center;display:none">
+    <input type="date" id="date-from" onchange="onRangeChange()">
+    <span style="font-size:12px;color:#888">—</span>
+    <input type="date" id="date-to" onchange="onRangeChange()">
+  </div>
   <button class="btn-refresh" onclick="loadData()">↻ Обновить</button>
   <span class="status-bar" id="status">Загрузка...</span>
 </div>
@@ -236,6 +244,8 @@ const CSS   = {assigned:'s-assigned',confirmed:'s-confirmed',done:'s-done',moved
 // ════════════════════════════════════════════════
 let period      = 'day';
 let currentDate = new Date();
+let dateFrom    = null; // для диапазона
+let dateTo      = null;
 let currentProduct = 'accounting'; // 'accounting' | 'platform'
 let allEntries  = []; // все встречи за период (оба продукта)
 let managers    = [];
@@ -436,9 +446,36 @@ function fmtDate(d)    { return d.toLocaleDateString('ru-RU', { day:'2-digit', m
 
 function getDates() {
   if (period === 'day') return [new Date(currentDate)];
-  const s = new Date(currentDate), dow = s.getDay();
-  s.setDate(s.getDate() + (dow === 0 ? -6 : 1 - dow));
-  return Array.from({ length: 5 }, (_, i) => addDays(s, i));
+
+  if (period === 'week') {
+    const s = new Date(currentDate), dow = s.getDay();
+    s.setDate(s.getDate() + (dow === 0 ? -6 : 1 - dow));
+    return Array.from({ length: 5 }, (_, i) => addDays(s, i));
+  }
+
+  if (period === 'month') {
+    const y = currentDate.getFullYear(), m = currentDate.getMonth();
+    const days = new Date(y, m+1, 0).getDate();
+    return Array.from({ length: days }, (_, i) => new Date(y, m, i+1));
+  }
+
+  if (period === 'quarter') {
+    const y = currentDate.getFullYear();
+    const q = Math.floor(currentDate.getMonth() / 3);
+    const start = new Date(y, q*3, 1);
+    const end   = new Date(y, q*3+3, 0);
+    const days  = [];
+    for (let d = new Date(start); d <= end; d.setDate(d.getDate()+1)) days.push(new Date(d));
+    return days;
+  }
+
+  if (period === 'range' && dateFrom && dateTo) {
+    const days = [];
+    for (let d = new Date(dateFrom); d <= new Date(dateTo); d.setDate(d.getDate()+1)) days.push(new Date(d));
+    return days;
+  }
+
+  return [new Date(currentDate)];
 }
 
 // Только встречи текущего продукта
@@ -455,7 +492,15 @@ function renderGrid() {
   const dates   = getDates();
   const entries = getEntries();
   document.getElementById('grid-loader').style.display = 'none';
-  const tbl = document.getElementById('grid'); tbl.style.display = '';
+  const tbl = document.getElementById('grid');
+  const wrap = document.querySelector('.grid-wrap');
+  // Скрыть сетку если период > 7 дней (месяц/квартал/большой диапазон)
+  if (dates.length > 7) {
+    wrap.style.display = 'none';
+    return;
+  }
+  wrap.style.display = '';
+  tbl.style.display = '';
 
   let html = '<thead><tr><th class="mgr-h">Менеджер ОП</th>';
   if (period === 'day') {
@@ -593,9 +638,39 @@ function setProduct(prod, el) {
 
 function setPeriod(p, el) {
   period = p;
-  document.querySelectorAll('.tab-group .tab-btn:not(.product-btn)').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('#period-tabs .tab-btn').forEach(t => t.classList.remove('active'));
   el.classList.add('active');
-  renderAll();
+  // Показать/скрыть поля диапазона
+  const ri = document.getElementById('range-inputs');
+  const dp = document.getElementById('date-pick');
+  if (p === 'range') {
+    ri.style.display = 'flex';
+    dp.style.display = 'none';
+    // Установить дефолтный диапазон — текущий месяц
+    const y = currentDate.getFullYear(), m = currentDate.getMonth();
+    const from = new Date(y, m, 1), to = new Date(y, m+1, 0);
+    document.getElementById('date-from').value = dateKey(from);
+    document.getElementById('date-to').value   = dateKey(to);
+    dateFrom = from; dateTo = to;
+  } else {
+    ri.style.display = 'none';
+    dp.style.display = '';
+  }
+  loadData();
+}
+
+function onDateChange() {
+  const dp = document.getElementById('date-pick');
+  if (dp.value) currentDate = new Date(dp.value + 'T12:00:00');
+  loadData();
+}
+
+function onRangeChange() {
+  const f = document.getElementById('date-from').value;
+  const t = document.getElementById('date-to').value;
+  if (f) dateFrom = new Date(f + 'T12:00:00');
+  if (t) dateTo   = new Date(t + 'T12:00:00');
+  if (dateFrom && dateTo && dateFrom <= dateTo) loadData();
 }
 
 // ════════════════════════════════════════════════
@@ -628,7 +703,7 @@ async function loadData() {
 
 function renderAll() {
   const dp = document.getElementById('date-pick');
-  if (dp.value) currentDate = new Date(dp.value + 'T12:00:00');
+  if (dp && dp.value) currentDate = new Date(dp.value + 'T12:00:00');
   loadData();
 }
 
