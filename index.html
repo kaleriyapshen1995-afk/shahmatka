@@ -334,8 +334,8 @@ async function loadEntries(from, to) {
     const res   = await api('crm.item.list', {
       entityTypeId: ETYPE,
       filter: {
-        ['>=' + F.date]: from + 'T00:00:00',
-        ['<=' + F.date]: to   + 'T23:59:59',
+        ['>=' + F.date]: from + 'T00:00:00+03:00',
+        ['<=' + F.date]: to   + 'T23:59:59+03:00',
       },
       select: ['id','title','stageId','assignedById', F.date, F.source, F.tm, F.client, F.manager, F.product],
       order:  { [F.date]: 'ASC' },
@@ -345,14 +345,14 @@ async function loadEntries(from, to) {
 
     return items.map(item => {
       const dt       = item[F.date] || '';
-      // Б24 хранит время в UTC, конвертируем в московское (+3)
+      // Б24 возвращает дату с +03:00 — берём дату и час напрямую из строки
       let date, slot;
       if (dt) {
-        const d = new Date(dt);
-        const msk = new Date(d.getTime() + 3 * 60 * 60 * 1000);
-        date = msk.toISOString().slice(0, 10);
-        const hh = msk.getUTCHours();
-        slot = hh + ':00';
+        // Формат: "2026-05-22T13:00:00+03:00" — берём первые 10 символов для даты
+        // и символы 11-12 для часа (уже московское время)
+        date = dt.slice(0, 10);
+        const hh = parseInt(dt.slice(11, 13));
+        slot = (isNaN(hh) ? 9 : hh) + ':00';
       } else {
         date = ''; slot = '9:00';
       }
