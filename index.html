@@ -112,10 +112,18 @@ td.slot.empty:hover{background:#f0f0ee}
     <span style="font-size:12px;color:#888">—</span>
     <input type="date" id="date-to" onchange="onRangeChange()">
   </div>
+  <div class="divider"></div>
+  <select id="mgr-filter" onchange="renderGrid();renderAnalytics()" style="font-size:12px;padding:5px 8px;border:1px solid #ddd;border-radius:6px;height:30px;max-width:160px">
+    <option value="">Все менеджеры</option>
+  </select>
   <button class="btn-refresh" onclick="loadData(true)">↻ Обновить</button>
   <span class="status-bar" id="status">Загрузка...</span>
 </div>
 
+<div id="lead-banner" style="display:none;background:#EBF5FF;border-bottom:1px solid #BDD7F0;padding:8px 16px;font-size:12px;color:#185FA5;display:none">
+  📎 Назначение встречи для лида: <strong id="lead-banner-title"></strong>
+  <a href="javascript:void(0)" onclick="clearLead()" style="margin-left:12px;color:#888;font-size:11px">✕ убрать</a>
+</div>
 <div class="main">
   <div class="grid-wrap">
     <div id="grid-loader" class="loader">Загружаем данные из Б24...</div>
@@ -139,15 +147,16 @@ td.slot.empty:hover{background:#f0f0ee}
     <table class="an-table">
       <thead><tr>
         <th>Менеджер ОП</th>
-        <th class="right">От ТМ</th>
-        <th class="right">Свои</th>
+        <th class="right">Назначено (ТМ)</th>
+        <th class="right">Назначено (ОП)</th>
         <th class="right">Всего</th>
         <th class="right">Проведено</th>
-        <th class="right">Переносов</th>
-        <th class="right">CR %</th>
+        <th class="right">CR% ТМ</th>
+        <th class="right">CR% ОП</th>
+        <th class="right">CR% Общий</th>
       </tr></thead>
       <tbody id="analytics-body">
-        <tr><td colspan="7" style="text-align:center;color:#aaa;padding:16px">Загрузка...</td></tr>
+        <tr><td colspan="8" style="text-align:center;color:#aaa;padding:16px">Загрузка...</td></tr>
       </tbody>
     </table>
   </div>
@@ -181,6 +190,13 @@ td.slot.empty:hover{background:#f0f0ee}
       <select id="m-tm"></select>
     </div>
     <div class="field"><label>Клиент / Компания</label><input type="text" id="m-client" placeholder="Название компании"></div>
+    <div class="field" id="lead-field">
+      <label>Лид в Б24</label>
+      <div style="display:flex;gap:6px;align-items:center">
+        <input type="text" id="m-lead-id" placeholder="ID лида" style="width:80px">
+        <input type="text" id="m-lead-title" placeholder="Название лида" style="flex:1" readonly>
+      </div>
+    </div>
     <div class="field">
       <label>Статус встречи</label>
       <select id="m-status">
@@ -205,36 +221,42 @@ td.slot.empty:hover{background:#f0f0ee}
 //  КОНФИГ
 // ════════════════════════════════════════════════
 const B24   = 'https://muddy-frog-7631.usanovavaleria55.workers.dev/';
-const ETYPE = 1036;
+// ── Режим: читаем из СДЕЛОК Б24 ──────────────────
+const USE_DEALS = true; // true = сделки, false = смарт
+
+const ETYPE = 1036; // смарт (не используется если USE_DEALS=true)
 
 const F = {
-  date    : 'ufCrm11MeetingDate',    // datetime
-  source  : 'ufCrm11Source',         // enumeration — ТМ/Менеджер ОП
-  tm      : 'ufCrm11_1779109467',    // employee — Кто из ТМ назначил
-  client  : 'ufCrm11_1779109488',    // string — Название клиента
-  manager : 'ufCrm11_1779109498',    // employee — Менеджер ОП
-
-  // ⚠️ ЗАГЛУШКА — замените на реальный код после создания поля в Б24
-  // Откройте crm.item.fields?entityTypeId=1036 и найдите поле "Продукт"
-  product : 'ufCrm11_1779299333',    // enumeration — Аккаунтинг/Платформа
+  // Поля СДЕЛКИ
+  date    : 'UF_CRM_1779825187',  // datetime — Дата и время встречи
+  status  : 'UF_CRM_1779825277',  // enumeration (multiple) — Статус встречи
+  tm      : 'UF_CRM_1675251074',  // employee — ТМ (Передал гол. пас)
+  manager : 'ASSIGNED_BY_ID',     // user — Менеджер ОП (Ответственный)
+  client  : 'TITLE',              // string — Название сделки как клиент
+  product : 'UF_CRM_642D1C1B1609C', // enumeration — Продукт (Аккаунтинг/Платформа)
 };
 
-// ID значений поля product (enumeration) — заполните после создания поля
-// Пример: {accounting: 123, platform: 124}
+// ID значений поля Статус встречи (UF_CRM_1779825277)
+const STATUS_IDS = {
+  assigned  : '5306', // Назначена
+  confirmed : '5305', // Подтверждена
+  moved     : '5304', // Перенос
+};
+
+// Продукты
 const PRODUCT_IDS = {
-  accounting : 5302, // Аккаунтинг
-  platform   : 5303, // Платформа
+  accounting : 1228, // Платформа (используем как Аккаунтинг — уточните ID)
+  platform   : 1229, // Консалтинг
 };
 
-// Реальные стадии (из crm.status.list → DYNAMIC_1036_STAGE_19)
-const STAGES = {
-  assigned  : 'DT1036_19:NEW',         // Назначена
-  moved     : 'DT1036_19:PREPARATION', // Перенос встречи
-  confirmed : 'DT1036_19:CLIENT',      // Согласование
-  done      : 'DT1036_19:SUCCESS',     // Успех / Проведена
-  cancel    : 'DT1036_19:FAIL',        // Провал / Отмена
-};
-const STAGE_KEY = Object.fromEntries(Object.entries(STAGES).map(([k,v])=>[v,k]));
+// Читаем lead_id из URL (?lead_id=123) — подставляется автоматически
+const URL_PARAMS = new URLSearchParams(window.location.search);
+const URL_LEAD_ID = URL_PARAMS.get('lead_id') || null;
+const URL_LEAD_TITLE = URL_PARAMS.get('lead_title') ? decodeURIComponent(URL_PARAMS.get('lead_title')) : null;
+
+// Статусные ключи для отображения в шахматке
+// done = сделка закрыта успешно (STAGE_SEMANTIC_ID === 'S')
+// cancel = сделка закрыта провалом (STAGE_SEMANTIC_ID === 'F')
 
 const SLOTS = ['9:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00'];
 const CSS   = {assigned:'s-assigned',confirmed:'s-confirmed',done:'s-done',moved:'s-moved',cancel:'s-cancel',own:'s-own'};
@@ -280,6 +302,13 @@ async function loadUsers() {
     const listOP = Array.isArray(resOP) ? resOP : (resOP.users || []);
     managers = listOP.map(u => ({ id: String(u.ID), name: ((u.NAME||'')+' '+(u.LAST_NAME||'')).trim() }));
     log('👥 Менеджеры ОП: ' + managers.length);
+    // Заполнить фильтр менеджеров
+    const sel = document.getElementById('mgr-filter');
+    if (sel) {
+      const cur = sel.value;
+      sel.innerHTML = '<option value="">Все менеджеры</option>' +
+        managers.map(m => `<option value="${m.id}"${m.id===cur?' selected':''}>${m.name}</option>`).join('');
+    }
 
     // Телемаркетологи — отдел 148
     const resTM = await api('user.get', {
@@ -298,15 +327,14 @@ async function loadUsers() {
 async function loadUsersFromEntries() {
   try {
     const past = new Date(); past.setDate(past.getDate() - 90);
-    const res  = await api('crm.item.list', {
-      entityTypeId: ETYPE,
+    const res  = await api('crm.deal.list', {
       filter: { ['>=' + F.date]: past.toISOString().slice(0,10) + 'T00:00:00' },
-      select: ['assignedById', F.manager, F.tm],
+      select: ['ASSIGNED_BY_ID', F.tm],
     });
+    const items = Array.isArray(res) ? res : [];
     const ids = new Set();
-    (res.items || []).forEach(i => {
-      if (i[F.manager])   ids.add(String(i[F.manager]));
-      if (i.assignedById) ids.add(String(i.assignedById));
+    items.forEach(i => {
+      if (i.ASSIGNED_BY_ID) ids.add(String(i.ASSIGNED_BY_ID));
     });
     if (ids.size) {
       try {
@@ -331,50 +359,48 @@ async function loadUsersFromEntries() {
 // ════════════════════════════════════════════════
 async function loadEntries(from, to) {
   try {
-    const res   = await api('crm.item.list', {
-      entityTypeId: ETYPE,
+    const res = await api('crm.deal.list', {
       filter: {
         ['>=' + F.date]: from + 'T00:00:00+03:00',
         ['<=' + F.date]: to   + 'T23:59:59+03:00',
       },
-      select: ['id','title','stageId','assignedById', F.date, F.source, F.tm, F.client, F.manager, F.product],
-      order:  { [F.date]: 'ASC' },
+      select: ['ID','TITLE','STAGE_ID','STAGE_SEMANTIC_ID','ASSIGNED_BY_ID',
+               F.date, F.status, F.tm, F.product],
+      order: { [F.date]: 'ASC' },
     });
-    const items = res.items || [];
-    log('📅 Встреч загружено: ' + items.length);
+    const items = Array.isArray(res) ? res : [];
+    log('📅 Сделок со встречами: ' + items.length);
 
     return items.map(item => {
-      const dt       = item[F.date] || '';
-      // Б24 возвращает дату с +03:00 — берём дату и час напрямую из строки
-      let date, slot;
-      if (dt) {
-        // Формат: "2026-05-22T13:00:00+03:00" — берём первые 10 символов для даты
-        // и символы 11-12 для часа (уже московское время)
-        date = dt.slice(0, 10);
-        const hh = parseInt(dt.slice(11, 13));
-        slot = (isNaN(hh) ? 9 : hh) + ':00';
-      } else {
-        date = ''; slot = '9:00';
-      }
-      const stageKey = STAGE_KEY[item.stageId] || 'assigned';
-      const hasTM    = !!(item[F.tm]);
-      const source   = hasTM ? 'tm' : 'own';
-      const mgrId    = String(item[F.manager] || item.assignedById || '');
+      const dt   = item[F.date] || '';
+      const date = dt.slice(0, 10);
+      const hh   = parseInt(dt.slice(11, 13));
+      const slot = (isNaN(hh) ? 9 : hh) + ':00';
 
-      // Определяем продукт
+      // Статус встречи из поля (multiple enumeration)
+      const rawStatus = item[F.status];
+      const statusArr = Array.isArray(rawStatus) ? rawStatus.map(String) : (rawStatus ? [String(rawStatus)] : []);
+      let statusKey = 'assigned';
+      if (statusArr.includes(STATUS_IDS.moved))          statusKey = 'moved';
+      else if (statusArr.includes(STATUS_IDS.confirmed)) statusKey = 'confirmed';
+      else if (statusArr.includes(STATUS_IDS.assigned))  statusKey = 'assigned';
+      if (item.STAGE_SEMANTIC_ID === 'S') statusKey = 'done';
+      if (item.STAGE_SEMANTIC_ID === 'F') statusKey = 'cancel';
+
+      const hasTM  = !!(item[F.tm]);
+      const source = hasTM ? 'tm' : 'own';
+      const mgrId  = String(item[F.manager] || item.ASSIGNED_BY_ID || '');
+
       const pVal = String(item[F.product] || '');
-      let product = 'accounting'; // дефолт
-      if (PRODUCT_IDS.platform && pVal === String(PRODUCT_IDS.platform)) product = 'platform';
-      else if (PRODUCT_IDS.accounting && pVal === String(PRODUCT_IDS.accounting)) product = 'accounting';
-      // Если поле ещё не создано — все встречи попадают в Аккаунтинг
+      let product = 'accounting';
+      if (String(PRODUCT_IDS.platform) === pVal) product = 'platform';
 
       return {
-        id: String(item.id), mgr: mgrId, date, slot,
-        source, product,
-        tm      : String(item[F.tm] || ''),
-        client  : String(item[F.client] || item.title || ''),
-        status  : stageKey,
-        stageId : item.stageId,
+        id: String(item.ID), mgr: mgrId, date, slot, source, product,
+        tm    : String(item[F.tm] || ''),
+        client: String(item.TITLE || ''),
+        status: statusKey,
+        dealId: String(item.ID),
       };
     });
   } catch (e) {
@@ -402,21 +428,25 @@ async function saveEntry() {
     // Значение поля product: если ID известны — шлём число, иначе строку
     const productVal = PRODUCT_IDS[product] || product;
 
+    // Статус встречи — массив ID
+    const statusVal = [];
+    if (skey === 'assigned')  statusVal.push(STATUS_IDS.assigned);
+    if (skey === 'confirmed') statusVal.push(STATUS_IDS.confirmed);
+    if (skey === 'moved')     statusVal.push(STATUS_IDS.moved);
+
     const fields = {
-      title        : client || (source === 'own' ? 'Своя встреча' : 'Встреча от ТМ'),
-      assignedById : parseInt(mgrId),
-      stageId      : STAGES[skey] || STAGES.assigned,
-      [F.date]     : dtVal ? dtVal + ':00' : '', // Б24 принимает ISO формат
+      TITLE        : client || (source === 'own' ? 'Своя встреча' : 'Встреча от ТМ'),
+      ASSIGNED_BY_ID: parseInt(mgrId),
+      [F.date]     : dtVal ? dtVal + ':00' : '',
       [F.tm]       : source === 'tm' ? (parseInt(tmId) || null) : null,
-      [F.client]   : client,
-      [F.manager]  : parseInt(mgrId),
+      [F.status]   : statusVal,
       [F.product]  : productVal,
     };
 
     if (editId) {
-      await api('crm.item.update', { entityTypeId: ETYPE, id: parseInt(editId), fields });
+      await api('crm.deal.update', { id: parseInt(editId), fields });
     } else {
-      await api('crm.item.add', { entityTypeId: ETYPE, fields });
+      await api('crm.deal.add', { fields });
     }
     closeModal();
     await loadData();
@@ -431,7 +461,7 @@ async function saveEntry() {
 async function deleteEntry() {
   if (!confirm('Удалить встречу?')) return;
   try {
-    await api('crm.item.delete', { entityTypeId: ETYPE, id: parseInt(editId) });
+    await api('crm.deal.delete', { id: parseInt(editId) });
     closeModal(); await loadData();
   } catch (e) { alert('Ошибка: ' + e.message); }
 }
@@ -522,8 +552,10 @@ function renderGrid() {
           html += `<td class="slot empty" onclick="openModal(null,'${mgr.id}','${sl}','${ds}')"></td>`;
         } else {
           const css = CSS[e.source === 'own' ? 'own' : e.status] || 's-assigned';
-          const lbl = e.client || uname(e.tm, tms) || e.status;
-          html += `<td class="slot" onclick="openModal('${e.id}','${mgr.id}','${sl}','${ds}')"><span class="cell ${css}" title="${lbl}">${lbl}</span></td>`;
+          const tmName = e.source === 'tm' ? uname(e.tm, tms) : '';
+          const lbl = e.client || tmName || e.status;
+          const tip = [e.client, tmName?'ТМ: '+tmName:'', e.leadId?'Лид #'+e.leadId:''].filter(Boolean).join(' | ');
+          html += `<td class="slot" onclick="openModal('${e.id}','${mgr.id}','${sl}','${ds}')"><span class="cell ${css}" title="${tip}">${lbl}</span></td>`;
         }
       });
     });
@@ -535,22 +567,43 @@ function renderGrid() {
 // ════════════════════════════════════════════════
 //  АНАЛИТИКА (с переносами)
 // ════════════════════════════════════════════════
+function crCell(val) {
+  if (val < 0) return '<td class="right">—</td>';
+  const cls = val >= 75 ? 'cr-good' : val >= 50 ? 'cr-mid' : 'cr-low';
+  return `<td class="right ${cls}">${val}%</td>`;
+}
+
+function getFilteredManagers() {
+  const sel = document.getElementById('mgr-filter');
+  const val = sel ? sel.value : '';
+  return val ? managers.filter(m => m.id === val) : managers;
+}
+
 function renderAnalytics() {
   const ds      = getDates().map(dateKey);
   const entries = getEntries();
-  let html = '', totTM = 0, totOwn = 0, totAll = 0, totDone = 0, totMoved = 0;
+  const mgrList = getFilteredManagers();
+  let html = '';
+  let totTM = 0, totOwn = 0, totAll = 0, totDone = 0;
+  let totDoneTM = 0, totDoneOwn = 0;
 
-  managers.forEach(mgr => {
-    const es    = entries.filter(e => e.mgr === mgr.id && ds.includes(e.date));
-    const tm    = es.filter(e => e.source === 'tm').length;
-    const own   = es.filter(e => e.source === 'own').length;
-    const total = tm + own;
-    const done  = es.filter(e => e.status === 'done').length;
-    const moved = es.filter(e => e.status === 'moved').length;
-    const cr    = total > 0 ? Math.round(done / total * 100) : -1;
-    const crCls = cr >= 75 ? 'cr-good' : cr >= 50 ? 'cr-mid' : 'cr-low';
+  mgrList.forEach(mgr => {
+    const es     = entries.filter(e => e.mgr === mgr.id && ds.includes(e.date));
+    const esTM   = es.filter(e => e.source === 'tm');
+    const esOwn  = es.filter(e => e.source === 'own');
+    const tm     = esTM.length;
+    const own    = esOwn.length;
+    const total  = tm + own;
+    const done   = es.filter(e => e.status === 'done').length;
+    const doneTM  = esTM.filter(e => e.status === 'done').length;
+    const doneOwn = esOwn.filter(e => e.status === 'done').length;
 
-    totTM += tm; totOwn += own; totAll += total; totDone += done; totMoved += moved;
+    const crTM   = tm   > 0 ? Math.round(doneTM  / tm   * 100) : -1;
+    const crOwn  = own  > 0 ? Math.round(doneOwn / own  * 100) : -1;
+    const crAll  = total > 0 ? Math.round(done   / total * 100) : -1;
+
+    totTM += tm; totOwn += own; totAll += total;
+    totDone += done; totDoneTM += doneTM; totDoneOwn += doneOwn;
 
     html += `<tr>
       <td>${mgr.name}</td>
@@ -558,25 +611,28 @@ function renderAnalytics() {
       <td class="right">${own}</td>
       <td class="right">${total}</td>
       <td class="right">${done}</td>
-      <td class="right ${moved > 0 ? 'moved-count' : ''}">${moved > 0 ? moved : '—'}</td>
-      <td class="right ${crCls}">${cr >= 0 ? cr + '%' : '—'}</td>
+      ${crCell(crTM)}
+      ${crCell(crOwn)}
+      ${crCell(crAll)}
     </tr>`;
   });
 
-  // Итоговая строка
-  const totCR  = totAll > 0 ? Math.round(totDone / totAll * 100) : -1;
-  const totCls = totCR >= 75 ? 'cr-good' : totCR >= 50 ? 'cr-mid' : 'cr-low';
+  // Итого
+  const totCRtm  = totTM   > 0 ? Math.round(totDoneTM  / totTM   * 100) : -1;
+  const totCRown = totOwn  > 0 ? Math.round(totDoneOwn / totOwn  * 100) : -1;
+  const totCRall = totAll  > 0 ? Math.round(totDone    / totAll  * 100) : -1;
   html += `<tr class="total-row">
     <td>Итого</td>
     <td class="right">${totTM}</td>
     <td class="right">${totOwn}</td>
     <td class="right">${totAll}</td>
     <td class="right">${totDone}</td>
-    <td class="right ${totMoved > 0 ? 'moved-count' : ''}">${totMoved > 0 ? totMoved : '—'}</td>
-    <td class="right ${totCls}">${totCR >= 0 ? totCR + '%' : '—'}</td>
+    ${crCell(totCRtm)}
+    ${crCell(totCRown)}
+    ${crCell(totCRall)}
   </tr>`;
 
-  if (!managers.length) html = '<tr><td colspan="7" style="text-align:center;color:#aaa;padding:16px">Нет данных</td></tr>';
+  if (!mgrList.length) html = '<tr><td colspan="8" style="text-align:center;color:#aaa;padding:16px">Нет данных</td></tr>';
   document.getElementById('analytics-body').innerHTML = html;
 }
 
@@ -611,6 +667,25 @@ function openModal(id, mgrId, slot, date) {
     document.getElementById('m-status').value = 'assigned';
   }
   toggleTM();
+
+  // Подставить лид из URL если есть
+  if (URL_LEAD_ID) {
+    document.getElementById('m-lead-id').value    = URL_LEAD_ID;
+    document.getElementById('m-lead-title').value = URL_LEAD_TITLE || ('Лид #' + URL_LEAD_ID);
+  } else if (id) {
+    const e = allEntries.find(x => x.id === id);
+    if (e && e.leadId) {
+      document.getElementById('m-lead-id').value    = e.leadId;
+      document.getElementById('m-lead-title').value = e.leadTitle || ('Лид #' + e.leadId);
+    } else {
+      document.getElementById('m-lead-id').value    = '';
+      document.getElementById('m-lead-title').value = '';
+    }
+  } else {
+    document.getElementById('m-lead-id').value    = '';
+    document.getElementById('m-lead-title').value = '';
+  }
+
   document.getElementById('modal-bg').classList.add('open');
 }
 
@@ -718,6 +793,22 @@ function renderAll() {
 //  СТАРТ
 // ════════════════════════════════════════════════
 document.getElementById('date-pick').value = dateKey(currentDate);
+
+// Показать баннер если открыто с lead_id
+if (URL_LEAD_ID) {
+  const banner = document.getElementById('lead-banner');
+  banner.style.display = 'block';
+  document.getElementById('lead-banner-title').textContent =
+    URL_LEAD_TITLE ? URL_LEAD_TITLE + ' (#' + URL_LEAD_ID + ')' : 'Лид #' + URL_LEAD_ID;
+}
+
+function clearLead() {
+  window.history.replaceState({}, '', window.location.pathname);
+  document.getElementById('lead-banner').style.display = 'none';
+  document.getElementById('m-lead-id').value = '';
+  document.getElementById('m-lead-title').value = '';
+}
+
 loadData();
 </script>
 </body>
