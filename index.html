@@ -241,6 +241,7 @@ const STATUS_IDS = {
   assigned  : '5306', // Назначена
   confirmed : '5305', // Подтверждена
   moved     : '5304', // Перенос
+  done      : '5310', // Проведена
 };
 
 // Продукты
@@ -363,9 +364,10 @@ async function loadEntries(from, to) {
       filter: {
         ['>=' + F.date]: from + 'T00:00:00+03:00',
         ['<=' + F.date]: to   + 'T23:59:59+03:00',
+        'CATEGORY_ID'  : 0,   // только воронка 0
       },
       select: ['ID','TITLE','STAGE_ID','STAGE_SEMANTIC_ID','ASSIGNED_BY_ID',
-               F.date, F.status, F.tm, F.product],
+               F.date, F.status, F.tm, F.product, F.manager],
       order: { [F.date]: 'ASC' },
     });
     const items = Array.isArray(res) ? res : [];
@@ -377,15 +379,23 @@ async function loadEntries(from, to) {
       const hh   = parseInt(dt.slice(11, 13));
       const slot = (isNaN(hh) ? 9 : hh) + ':00';
 
-      // Статус встречи из поля (multiple enumeration)
+      // Статус встречи — сначала поле статуса, потом стадия сделки
       const rawStatus = item[F.status];
       const statusArr = Array.isArray(rawStatus) ? rawStatus.map(String) : (rawStatus ? [String(rawStatus)] : []);
       let statusKey = 'assigned';
-      if (statusArr.includes(STATUS_IDS.moved))          statusKey = 'moved';
+
+      // 1. Поле «Статус встречи» (приоритет)
+      if      (statusArr.includes(STATUS_IDS.done))      statusKey = 'done';
+      else if (statusArr.includes(STATUS_IDS.moved))     statusKey = 'moved';
       else if (statusArr.includes(STATUS_IDS.confirmed)) statusKey = 'confirmed';
       else if (statusArr.includes(STATUS_IDS.assigned))  statusKey = 'assigned';
-      if (item.STAGE_SEMANTIC_ID === 'S') statusKey = 'done';
-      if (item.STAGE_SEMANTIC_ID === 'F') statusKey = 'cancel';
+      // 2. Стадия сделки
+      else if (item.STAGE_ID === 'UC_BUH8HL') statusKey = 'confirmed'; // Встреча подтверждена
+      else if (item.STAGE_ID === 'EXECUTING') statusKey = 'done';      // Встреча/Презентация проведена
+      else if (item.STAGE_ID === '4')         statusKey = 'moved';     // Возврат в ТМ = Перенос
+      else if (item.STAGE_ID === 'WON')       statusKey = 'done';      // Сделка успешна
+      else if (item.STAGE_SEMANTIC_ID === 'S') statusKey = 'done';     // Любой успех
+      else if (item.STAGE_SEMANTIC_ID === 'F') statusKey = 'cancel';   // Любой провал
 
       const hasTM  = !!(item[F.tm]);
       const source = hasTM ? 'tm' : 'own';
