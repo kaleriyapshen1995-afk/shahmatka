@@ -309,29 +309,17 @@ async function apiAll(method, params = {}) {
 // ════════════════════════════════════════════════
 async function loadUsers() {
   try {
-    // Менеджеры ОП — отдел 17
-    const listOP = await apiAll('user.get', {
-      filter: { ACTIVE: true, UF_DEPARTMENT: 17 },
-      select: ['ID','NAME','LAST_NAME'],
-    });
-    managers = listOP.map(u => ({
-      id  : String(u.ID),
-      name: (u.NAME + ' ' + u.LAST_NAME).trim(),
-    }));
-    log('👥 Менеджеры ОП: ' + managers.length);
+    // Загружаем менеджеров и ТМ параллельно
+    const [listOP, listTM] = await Promise.all([
+      apiAll('user.get', { filter: { ACTIVE: true, UF_DEPARTMENT: 17  }, select: ['ID','NAME','LAST_NAME'] }),
+      apiAll('user.get', { filter: { ACTIVE: true, UF_DEPARTMENT: 148 }, select: ['ID','NAME','LAST_NAME'] }),
+    ]);
 
-    // Телемаркетологи — отдел 148
-    const listTM = await apiAll('user.get', {
-      filter: { ACTIVE: true, UF_DEPARTMENT: 148 },
-      select: ['ID','NAME','LAST_NAME'],
-    });
-    tms = listTM.map(u => ({
-      id  : String(u.ID),
-      name: (u.NAME + ' ' + u.LAST_NAME).trim(),
-    }));
-    log('📞 Телемаркетологи: ' + tms.length);
+    const toUser = u => ({ id: String(u.ID), name: (u.NAME + ' ' + u.LAST_NAME).trim() });
+    managers = listOP.map(toUser);
+    tms      = listTM.map(toUser);
+    log('👥 Менеджеры: ' + managers.length + '  📞 ТМ: ' + tms.length);
 
-    // Заполнить фильтр менеджеров
     const sel = document.getElementById('mgr-filter');
     if (sel) {
       const cur = sel.value;
@@ -759,13 +747,21 @@ async function loadData(forceReloadUsers=false) {
   document.getElementById('grid').style.display = 'none';
   document.getElementById('debug-box').innerHTML = '';
 
-  if (!usersLoaded || forceReloadUsers) {
-    await loadUsers();
-    usersLoaded = true;
-  }
-
   const dates = getDates();
-  allEntries  = await loadEntries(dateKey(dates[0]), dateKey(dates[dates.length-1]));
+  const from  = dateKey(dates[0]);
+  const to    = dateKey(dates[dates.length - 1]);
+
+  if (!usersLoaded || forceReloadUsers) {
+    // Загружаем пользователей и лиды параллельно
+    const [_, entries] = await Promise.all([
+      loadUsers(),
+      loadEntries(from, to),
+    ]);
+    usersLoaded = true;
+    allEntries  = entries;
+  } else {
+    allEntries = await loadEntries(from, to);
+  }
   setStatus('Обновлено ' + new Date().toLocaleTimeString('ru-RU'));
   renderGrid(); renderAnalytics();
 }
