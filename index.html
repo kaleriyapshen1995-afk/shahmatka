@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Шахматка встреч</title>
+<script src="//api.bitrix24.com/api/v1/"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f3;color:#1a1a1a;font-size:13px}
@@ -32,6 +33,7 @@ thead th.mgr-h{text-align:left;min-width:130px;position:sticky;left:0;z-index:3;
 td.mgr-cell{background:#fafaf8;font-size:12px;font-weight:500;padding:6px 10px;border-bottom:1px solid #e5e5e2;border-right:1px solid #e5e5e2;white-space:nowrap;position:sticky;left:0;z-index:1;min-width:130px}
 td.slot{width:80px;min-width:80px;height:42px;border-bottom:1px solid #e5e5e2;border-right:1px solid #e5e5e2;vertical-align:middle;text-align:center;cursor:pointer}
 td.slot.empty:hover{background:#f0f0ee}
+td.slot.current-lead-slot{background:#EBF5FF}
 .cell{font-size:10px;padding:2px 5px;border-radius:4px;display:inline-block;max-width:74px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#fff;line-height:1.5}
 .s-assigned{background:#888780}
 .s-confirmed{background:#1D9E75}
@@ -62,7 +64,9 @@ td.slot.empty:hover{background:#f0f0ee}
 .cr-good{color:#3B6D11;font-weight:600}
 .cr-mid{color:#BA7517;font-weight:600}
 .cr-low{color:#c0392b;font-weight:600}
-.moved-count{color:#BA7517;font-weight:500}
+
+/* ── Баннер лида ── */
+#lead-banner{display:none;background:#EBF5FF;border-bottom:1px solid #BDD7F0;padding:8px 16px;font-size:12px;color:#185FA5}
 
 /* ── Модалка ── */
 .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:100;align-items:flex-start;justify-content:center;padding-top:60px}
@@ -85,12 +89,16 @@ td.slot.empty:hover{background:#f0f0ee}
 </head>
 <body>
 
+<div id="lead-banner">
+  📎 Назначение встречи для лида: <strong id="lead-banner-title"></strong>
+  <a href="javascript:void(0)" onclick="clearLead()" style="margin-left:12px;color:#888;font-size:11px">✕ убрать</a>
+</div>
+
 <div class="topbar">
   <strong>Шахматка встреч</strong>
 
   <div class="divider"></div>
 
-  <!-- Переключатель продукта -->
   <div class="tab-group" id="product-tabs">
     <button class="tab-btn product-btn active-acc" id="btn-acc" onclick="setProduct('accounting',this)">Аккаунтинг</button>
     <button class="tab-btn product-btn" id="btn-plat" onclick="setProduct('platform',this)">Платформа</button>
@@ -98,7 +106,6 @@ td.slot.empty:hover{background:#f0f0ee}
 
   <div class="divider"></div>
 
-  <!-- Период -->
   <div class="tab-group" id="period-tabs">
     <button class="tab-btn active" onclick="setPeriod('day',this)">День</button>
     <button class="tab-btn" onclick="setPeriod('week',this)">Неделя</button>
@@ -106,24 +113,25 @@ td.slot.empty:hover{background:#f0f0ee}
     <button class="tab-btn" onclick="setPeriod('quarter',this)">Квартал</button>
     <button class="tab-btn" onclick="setPeriod('range',this)">Диапазон</button>
   </div>
+
   <input type="date" id="date-pick" onchange="onDateChange()">
-  <div id="range-inputs" style="display:none;gap:6px;align-items:center;display:none">
+
+  <div id="range-inputs" style="display:none;gap:6px;align-items:center">
     <input type="date" id="date-from" onchange="onRangeChange()">
     <span style="font-size:12px;color:#888">—</span>
     <input type="date" id="date-to" onchange="onRangeChange()">
   </div>
+
   <div class="divider"></div>
+
   <select id="mgr-filter" onchange="renderGrid();renderAnalytics()" style="font-size:12px;padding:5px 8px;border:1px solid #ddd;border-radius:6px;height:30px;max-width:160px">
     <option value="">Все менеджеры</option>
   </select>
+
   <button class="btn-refresh" onclick="loadData(true)">↻ Обновить</button>
-  <span class="status-bar" id="status">Загрузка...</span>
+  <span class="status-bar" id="status">Инициализация...</span>
 </div>
 
-<div id="lead-banner" style="display:none;background:#EBF5FF;border-bottom:1px solid #BDD7F0;padding:8px 16px;font-size:12px;color:#185FA5;display:none">
-  📎 Назначение встречи для лида: <strong id="lead-banner-title"></strong>
-  <a href="javascript:void(0)" onclick="clearLead()" style="margin-left:12px;color:#888;font-size:11px">✕ убрать</a>
-</div>
 <div class="main">
   <div class="grid-wrap">
     <div id="grid-loader" class="loader">Загружаем данные из Б24...</div>
@@ -164,7 +172,7 @@ td.slot.empty:hover{background:#f0f0ee}
   <div class="debug-box" id="debug-box"></div>
 </div>
 
-<!-- Модалка создания/редактирования встречи -->
+<!-- Модалка -->
 <div class="modal-bg" id="modal-bg">
   <div class="modal">
     <h3 id="modal-title">Новая встреча</h3>
@@ -189,23 +197,19 @@ td.slot.empty:hover{background:#f0f0ee}
       <label>Телемаркетолог</label>
       <select id="m-tm"></select>
     </div>
-    <div class="field"><label>Клиент / Компания</label><input type="text" id="m-client" placeholder="Название компании"></div>
-    <div class="field" id="lead-field">
-      <label>Лид в Б24</label>
-      <div style="display:flex;gap:6px;align-items:center">
-        <input type="text" id="m-lead-id" placeholder="ID лида" style="width:80px">
-        <input type="text" id="m-lead-title" placeholder="Название лида" style="flex:1" readonly>
-      </div>
-    </div>
+    <div class="field"><label>Клиент / Компания</label><input type="text" id="m-client" placeholder="Название"></div>
     <div class="field">
       <label>Статус встречи</label>
       <select id="m-status">
         <option value="assigned">Назначена</option>
-        <option value="confirmed">Подтверждена (Согласование)</option>
-        <option value="done">Проведена (Успех)</option>
+        <option value="confirmed">Подтверждена</option>
+        <option value="done">Проведена</option>
         <option value="moved">Перенесена</option>
-        <option value="cancel">Отмена (Провал)</option>
+        <option value="cancel">Отмена</option>
       </select>
+    </div>
+    <div id="lead-id-info" style="display:none;font-size:11px;color:#185FA5;padding:4px 0">
+      📎 Лид: <strong id="modal-lead-label"></strong>
     </div>
 
     <div class="modal-btns">
@@ -220,44 +224,26 @@ td.slot.empty:hover{background:#f0f0ee}
 // ════════════════════════════════════════════════
 //  КОНФИГ
 // ════════════════════════════════════════════════
-const B24   = 'https://muddy-frog-7631.usanovavaleria55.workers.dev/';
-// ── Режим: читаем из СДЕЛОК Б24 ──────────────────
-const USE_DEALS = true; // true = сделки, false = смарт
-
-const ETYPE = 1036; // смарт (не используется если USE_DEALS=true)
-
 const F = {
-  // Поля СДЕЛКИ
-  date    : 'UF_CRM_1779825187',  // datetime — Дата и время встречи
-  status  : 'UF_CRM_1779825277',  // enumeration (multiple) — Статус встречи
-  tm      : 'UF_CRM_1675251074',  // employee — ТМ (Передал гол. пас)
-  manager : 'ASSIGNED_BY_ID',     // user — Менеджер ОП (Ответственный)
-  client  : 'TITLE',              // string — Название сделки как клиент
-  product : 'UF_CRM_642D1C1B1609C', // enumeration — Продукт (Аккаунтинг/Платформа)
+  date    : 'UF_CRM_1779825187',   // дата/время встречи
+  status  : 'UF_CRM_1779825277',   // статус встречи
+  tm      : 'UF_CRM_1675251074',   // телемаркетолог
+  manager : 'ASSIGNED_BY_ID',      // ответственный менеджер ОП
+  client  : 'TITLE',               // название лида/сделки
+  product : 'UF_CRM_642D1C1B1609C', // продукт (держать)
 };
 
-// ID значений поля Статус встречи (UF_CRM_1779825277)
 const STATUS_IDS = {
-  assigned  : '5306', // Назначена
-  confirmed : '5305', // Подтверждена
-  moved     : '5304', // Перенос
-  done      : '5310', // Проведена
+  assigned  : '5306',
+  confirmed : '5305',
+  moved     : '5304',
+  done      : '5310',
 };
 
-// Продукты
 const PRODUCT_IDS = {
-  accounting : 1228, // Платформа (используем как Аккаунтинг — уточните ID)
-  platform   : 1229, // Консалтинг
+  accounting : '1228',
+  platform   : '1229',
 };
-
-// Читаем lead_id из URL (?lead_id=123) — подставляется автоматически
-const URL_PARAMS = new URLSearchParams(window.location.search);
-const URL_LEAD_ID = URL_PARAMS.get('lead_id') || null;
-const URL_LEAD_TITLE = URL_PARAMS.get('lead_title') ? decodeURIComponent(URL_PARAMS.get('lead_title')) : null;
-
-// Статусные ключи для отображения в шахматке
-// done = сделка закрыта успешно (STAGE_SEMANTIC_ID === 'S')
-// cancel = сделка закрыта провалом (STAGE_SEMANTIC_ID === 'F')
 
 const SLOTS = ['9:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00'];
 const CSS   = {assigned:'s-assigned',confirmed:'s-confirmed',done:'s-done',moved:'s-moved',cancel:'s-cancel',own:'s-own'};
@@ -265,29 +251,59 @@ const CSS   = {assigned:'s-assigned',confirmed:'s-confirmed',done:'s-done',moved
 // ════════════════════════════════════════════════
 //  СОСТОЯНИЕ
 // ════════════════════════════════════════════════
-let period      = 'day';
-let currentDate = new Date();
-let dateFrom    = null; // для диапазона
-let dateTo      = null;
-let currentProduct = 'accounting'; // 'accounting' | 'platform'
-let allEntries  = []; // все встречи за период (оба продукта)
-let managers    = [];
-let tms         = [];
-let editId      = null, modalMgr, modalSlot, modalDate;
+let period         = 'day';
+let currentDate    = new Date();
+let dateFrom       = null;
+let dateTo         = null;
+let currentProduct = 'accounting';
+let allEntries     = [];
+let managers       = [];
+let tms            = [];
+let editId         = null, modalMgr, modalSlot, modalDate;
+
+// Контекст BX24
+let currentLeadId  = null;  // ID лида если открыто из лида
+let currentDealId  = null;  // ID сделки если открыто из сделки
+let bx24Ready      = false;
 
 // ════════════════════════════════════════════════
-//  API
+//  BX24 API
 // ════════════════════════════════════════════════
-async function api(method, params = {}) {
-  const r = await fetch(B24 + method, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(params),
+
+// Одиночный вызов (update/add/delete)
+function apiOne(method, params = {}) {
+  return new Promise((resolve, reject) => {
+    BX24.callMethod(method, params, function(result) {
+      if (result.error()) {
+        const e = result.error();
+        reject(new Error(e.ex?.error_description || e.ex?.error || String(e)));
+      } else {
+        resolve(result.data());
+      }
+    });
   });
-  if (!r.ok) throw new Error('HTTP ' + r.status);
-  const d = await r.json();
-  if (d.error) throw new Error(d.error_description || d.error);
-  return d.result;
+}
+
+// Вызов с автопагинацией (list-методы)
+function apiAll(method, params = {}) {
+  return new Promise((resolve, reject) => {
+    const all = [];
+    function handler(result) {
+      if (result.error()) {
+        const e = result.error();
+        reject(new Error(e.ex?.error_description || e.ex?.error || String(e)));
+        return;
+      }
+      const data = result.data();
+      if (Array.isArray(data)) all.push(...data);
+      if (result.more()) {
+        result.next();
+      } else {
+        resolve(all);
+      }
+    }
+    BX24.callMethod(method, params, handler);
+  });
 }
 
 // ════════════════════════════════════════════════
@@ -296,13 +312,27 @@ async function api(method, params = {}) {
 async function loadUsers() {
   try {
     // Менеджеры ОП — отдел 17
-    const resOP = await api('user.get', {
+    const listOP = await apiAll('user.get', {
       filter: { ACTIVE: true, UF_DEPARTMENT: 17 },
       select: ['ID','NAME','LAST_NAME'],
     });
-    const listOP = Array.isArray(resOP) ? resOP : (resOP.users || []);
-    managers = listOP.map(u => ({ id: String(u.ID), name: ((u.NAME||'')+' '+(u.LAST_NAME||'')).trim() }));
+    managers = listOP.map(u => ({
+      id  : String(u.ID),
+      name: (u.NAME + ' ' + u.LAST_NAME).trim(),
+    }));
     log('👥 Менеджеры ОП: ' + managers.length);
+
+    // Телемаркетологи — отдел 148
+    const listTM = await apiAll('user.get', {
+      filter: { ACTIVE: true, UF_DEPARTMENT: 148 },
+      select: ['ID','NAME','LAST_NAME'],
+    });
+    tms = listTM.map(u => ({
+      id  : String(u.ID),
+      name: (u.NAME + ' ' + u.LAST_NAME).trim(),
+    }));
+    log('📞 Телемаркетологи: ' + tms.length);
+
     // Заполнить фильтр менеджеров
     const sel = document.getElementById('mgr-filter');
     if (sel) {
@@ -310,68 +340,27 @@ async function loadUsers() {
       sel.innerHTML = '<option value="">Все менеджеры</option>' +
         managers.map(m => `<option value="${m.id}"${m.id===cur?' selected':''}>${m.name}</option>`).join('');
     }
-
-    // Телемаркетологи — отдел 148
-    const resTM = await api('user.get', {
-      filter: { ACTIVE: true, UF_DEPARTMENT: 148 },
-      select: ['ID','NAME','LAST_NAME'],
-    });
-    const listTM = Array.isArray(resTM) ? resTM : (resTM.users || []);
-    tms = listTM.map(u => ({ id: String(u.ID), name: ((u.NAME||'')+' '+(u.LAST_NAME||'')).trim() }));
-    log('📞 Телемаркетологи: ' + tms.length);
   } catch (e) {
-    log('⚠️ user.get: ' + e.message + ' — пробуем через встречи');
-    await loadUsersFromEntries();
-  }
-}
-
-async function loadUsersFromEntries() {
-  try {
-    const past = new Date(); past.setDate(past.getDate() - 90);
-    const res  = await api('crm.deal.list', {
-      filter: { ['>=' + F.date]: past.toISOString().slice(0,10) + 'T00:00:00' },
-      select: ['ASSIGNED_BY_ID', F.tm],
-    });
-    const items = Array.isArray(res) ? res : [];
-    const ids = new Set();
-    items.forEach(i => {
-      if (i.ASSIGNED_BY_ID) ids.add(String(i.ASSIGNED_BY_ID));
-    });
-    if (ids.size) {
-      try {
-        const res2  = await api('user.get', { filter: { ID: [...ids] }, select: ['ID','NAME','LAST_NAME'] });
-        const list2 = Array.isArray(res2) ? res2 : (res2.users || []);
-        const users2 = list2.map(u => ({ id: String(u.ID), name: ((u.NAME||'')+' '+(u.LAST_NAME||'')).trim() }));
-        managers = users2; tms = users2;
-        log('👥 Пользователи из встреч: ' + users2.length);
-        return;
-      } catch(e2) { log('⚠️ user.get по ID: ' + e2.message); }
-      managers = [...ids].map(id => ({ id, name: 'Менеджер ' + id }));
-      tms = managers;
-    }
-  } catch(e) {
-    log('⚠️ loadUsersFromEntries: ' + e.message);
+    log('⚠️ loadUsers: ' + e.message);
     managers = []; tms = [];
   }
 }
 
 // ════════════════════════════════════════════════
-//  ВСТРЕЧИ
+//  ЛИДЫ → ВСТРЕЧИ
 // ════════════════════════════════════════════════
 async function loadEntries(from, to) {
   try {
-    const res = await api('crm.deal.list', {
+    const items = await apiAll('crm.lead.list', {
       filter: {
         ['>=' + F.date]: from + 'T00:00:00+03:00',
         ['<=' + F.date]: to   + 'T23:59:59+03:00',
-        'CATEGORY_ID'  : 0,   // только воронка 0
       },
-      select: ['ID','TITLE','STAGE_ID','STAGE_SEMANTIC_ID','ASSIGNED_BY_ID',
-               F.date, F.status, F.tm, F.product, F.manager],
+      select: ['ID','TITLE','STATUS_ID','ASSIGNED_BY_ID',
+               F.date, F.status, F.tm, F.product],
       order: { [F.date]: 'ASC' },
     });
-    const items = Array.isArray(res) ? res : [];
-    log('📅 Сделок со встречами: ' + items.length);
+    log('📅 Лидов со встречами: ' + items.length);
 
     return items.map(item => {
       const dt   = item[F.date] || '';
@@ -379,38 +368,34 @@ async function loadEntries(from, to) {
       const hh   = parseInt(dt.slice(11, 13));
       const slot = (isNaN(hh) ? 9 : hh) + ':00';
 
-      // Статус встречи — сначала поле статуса, потом стадия сделки
+      // Статус встречи
       const rawStatus = item[F.status];
-      const statusArr = Array.isArray(rawStatus) ? rawStatus.map(String) : (rawStatus ? [String(rawStatus)] : []);
+      const statusArr = Array.isArray(rawStatus)
+        ? rawStatus.map(String)
+        : (rawStatus ? [String(rawStatus)] : []);
       let statusKey = 'assigned';
-
-      // 1. Поле «Статус встречи» (приоритет)
       if      (statusArr.includes(STATUS_IDS.done))      statusKey = 'done';
       else if (statusArr.includes(STATUS_IDS.moved))     statusKey = 'moved';
       else if (statusArr.includes(STATUS_IDS.confirmed)) statusKey = 'confirmed';
       else if (statusArr.includes(STATUS_IDS.assigned))  statusKey = 'assigned';
-      // 2. Стадия сделки
-      else if (item.STAGE_ID === 'UC_BUH8HL') statusKey = 'confirmed'; // Встреча подтверждена
-      else if (item.STAGE_ID === 'EXECUTING') statusKey = 'done';      // Встреча/Презентация проведена
-      else if (item.STAGE_ID === '4')         statusKey = 'moved';     // Возврат в ТМ = Перенос
-      else if (item.STAGE_ID === 'WON')       statusKey = 'done';      // Сделка успешна
-      else if (item.STAGE_SEMANTIC_ID === 'S') statusKey = 'done';     // Любой успех
-      else if (item.STAGE_SEMANTIC_ID === 'F') statusKey = 'cancel';   // Любой провал
+      // Статус лида как fallback
+      else if (item.STATUS_ID === 'WON')    statusKey = 'done';
+      else if (item.STATUS_ID === 'JUNK')   statusKey = 'cancel';
 
       const hasTM  = !!(item[F.tm]);
       const source = hasTM ? 'tm' : 'own';
       const mgrId  = String(item[F.manager] || item.ASSIGNED_BY_ID || '');
 
       const pVal = String(item[F.product] || '');
-      let product = 'accounting';
-      if (String(PRODUCT_IDS.platform) === pVal) product = 'platform';
+      const product = pVal === PRODUCT_IDS.platform ? 'platform' : 'accounting';
 
       return {
-        id: String(item.ID), mgr: mgrId, date, slot, source, product,
-        tm    : String(item[F.tm] || ''),
-        client: String(item.TITLE || ''),
-        status: statusKey,
-        dealId: String(item.ID),
+        id     : String(item.ID),
+        mgr    : mgrId,
+        date, slot, source, product,
+        tm     : String(item[F.tm] || ''),
+        client : String(item.TITLE || ''),
+        status : statusKey,
       };
     });
   } catch (e) {
@@ -435,29 +420,34 @@ async function saveEntry() {
     const skey    = document.getElementById('m-status').value;
     const product = document.getElementById('m-product').value;
 
-    // Значение поля product: если ID известны — шлём число, иначе строку
-    const productVal = PRODUCT_IDS[product] || product;
+    const productVal = PRODUCT_IDS[product] || '';
 
-    // Статус встречи — массив ID
     const statusVal = [];
     if (skey === 'assigned')  statusVal.push(STATUS_IDS.assigned);
     if (skey === 'confirmed') statusVal.push(STATUS_IDS.confirmed);
     if (skey === 'moved')     statusVal.push(STATUS_IDS.moved);
+    if (skey === 'done')      statusVal.push(STATUS_IDS.done);
 
     const fields = {
-      TITLE        : client || (source === 'own' ? 'Своя встреча' : 'Встреча от ТМ'),
-      ASSIGNED_BY_ID: parseInt(mgrId),
-      [F.date]     : dtVal ? dtVal + ':00' : '',
-      [F.tm]       : source === 'tm' ? (parseInt(tmId) || null) : null,
-      [F.status]   : statusVal,
-      [F.product]  : productVal,
+      TITLE          : client || (source === 'own' ? 'Своя встреча' : 'Встреча от ТМ'),
+      ASSIGNED_BY_ID : parseInt(mgrId),
+      [F.date]       : dtVal ? dtVal + ':00' : '',
+      [F.tm]         : source === 'tm' ? (parseInt(tmId) || null) : null,
+      [F.status]     : statusVal,
+      [F.product]    : productVal,
     };
 
     if (editId) {
-      await api('crm.deal.update', { id: parseInt(editId), fields });
+      // Редактирование существующего лида
+      await apiOne('crm.lead.update', { id: parseInt(editId), fields });
+    } else if (currentLeadId) {
+      // Обновляем текущий лид (ТМ назначает встречу из карточки лида)
+      await apiOne('crm.lead.update', { id: parseInt(currentLeadId), fields });
     } else {
-      await api('crm.deal.add', { fields });
+      // Создаём новый лид
+      await apiOne('crm.lead.add', { fields });
     }
+
     closeModal();
     await loadData();
   } catch (e) {
@@ -469,9 +459,9 @@ async function saveEntry() {
 }
 
 async function deleteEntry() {
-  if (!confirm('Удалить встречу?')) return;
+  if (!confirm('Удалить встречу (лид)?')) return;
   try {
-    await api('crm.deal.delete', { id: parseInt(editId) });
+    await apiOne('crm.lead.delete', { id: parseInt(editId) });
     closeModal(); await loadData();
   } catch (e) { alert('Ошибка: ' + e.message); }
 }
@@ -482,7 +472,7 @@ async function deleteEntry() {
 function dateKey(d)    { return d.toISOString().slice(0, 10); }
 function addDays(d, n) { const r = new Date(d); r.setDate(r.getDate() + n); return r; }
 function fmtDay(d)     { return ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'][d.getDay()]; }
-function fmtDate(d)    { return d.toLocaleDateString('ru-RU', { day:'2-digit', month:'2-digit' }); }
+function fmtDate(d)    { return d.toLocaleDateString('ru-RU', {day:'2-digit',month:'2-digit'}); }
 
 function getDates() {
   if (period === 'day') return [new Date(currentDate)];
@@ -490,21 +480,20 @@ function getDates() {
   if (period === 'week') {
     const s = new Date(currentDate), dow = s.getDay();
     s.setDate(s.getDate() + (dow === 0 ? -6 : 1 - dow));
-    return Array.from({ length: 5 }, (_, i) => addDays(s, i));
+    return Array.from({length:5}, (_,i) => addDays(s, i));
   }
 
   if (period === 'month') {
     const y = currentDate.getFullYear(), m = currentDate.getMonth();
     const days = new Date(y, m+1, 0).getDate();
-    return Array.from({ length: days }, (_, i) => new Date(y, m, i+1));
+    return Array.from({length:days}, (_,i) => new Date(y, m, i+1));
   }
 
   if (period === 'quarter') {
     const y = currentDate.getFullYear();
     const q = Math.floor(currentDate.getMonth() / 3);
-    const start = new Date(y, q*3, 1);
-    const end   = new Date(y, q*3+3, 0);
-    const days  = [];
+    const start = new Date(y, q*3, 1), end = new Date(y, q*3+3, 0);
+    const days = [];
     for (let d = new Date(start); d <= end; d.setDate(d.getDate()+1)) days.push(new Date(d));
     return days;
   }
@@ -518,9 +507,13 @@ function getDates() {
   return [new Date(currentDate)];
 }
 
-// Только встречи текущего продукта
 function getEntries() {
-  return allEntries.filter(e => e.product === currentProduct);
+  const sel = document.getElementById('mgr-filter');
+  const mgrVal = sel ? sel.value : '';
+  return allEntries.filter(e =>
+    e.product === currentProduct &&
+    (mgrVal === '' || e.mgr === mgrVal)
+  );
 }
 
 function uname(id, list) {
@@ -532,15 +525,20 @@ function renderGrid() {
   const dates   = getDates();
   const entries = getEntries();
   document.getElementById('grid-loader').style.display = 'none';
-  const tbl = document.getElementById('grid');
+  const tbl  = document.getElementById('grid');
   const wrap = document.querySelector('.grid-wrap');
-  // Скрыть сетку если период > 7 дней (месяц/квартал/большой диапазон)
+
   if (dates.length > 7) {
     wrap.style.display = 'none';
     return;
   }
   wrap.style.display = '';
   tbl.style.display = '';
+
+  // Менеджеры с учётом фильтра
+  const sel    = document.getElementById('mgr-filter');
+  const mgrVal = sel ? sel.value : '';
+  const mgrList = mgrVal ? managers.filter(m => m.id === mgrVal) : managers;
 
   let html = '<thead><tr><th class="mgr-h">Менеджер ОП</th>';
   if (period === 'day') {
@@ -552,30 +550,38 @@ function renderGrid() {
   }
   html += '</tr></thead><tbody>';
 
-  managers.forEach(mgr => {
+  mgrList.forEach(mgr => {
     html += `<tr><td class="mgr-cell">${mgr.name}</td>`;
     const dsArr = period === 'day' ? [dateKey(dates[0])] : dates.map(dateKey);
     dsArr.forEach(ds => {
       SLOTS.forEach(sl => {
-        const e = entries.find(x => x.mgr === mgr.id && x.date === ds && x.slot === sl);
+        // Ищем лид в этом слоте (среди всех, не только текущего продукта — для подсветки)
+        const e = allEntries.find(x =>
+          x.mgr === mgr.id && x.date === ds && x.slot === sl &&
+          x.product === currentProduct
+        );
         if (!e) {
+          // Подсветить слот если это текущий лид и слот свободен
+          const isCurrentSlot = currentLeadId && !e;
           html += `<td class="slot empty" onclick="openModal(null,'${mgr.id}','${sl}','${ds}')"></td>`;
         } else {
-          const css = CSS[e.source === 'own' ? 'own' : e.status] || 's-assigned';
+          const css  = CSS[e.source === 'own' ? 'own' : e.status] || 's-assigned';
           const tmName = e.source === 'tm' ? uname(e.tm, tms) : '';
-          const lbl = e.client || tmName || e.status;
-          const tip = [e.client, tmName?'ТМ: '+tmName:'', e.leadId?'Лид #'+e.leadId:''].filter(Boolean).join(' | ');
-          html += `<td class="slot" onclick="openModal('${e.id}','${mgr.id}','${sl}','${ds}')"><span class="cell ${css}" title="${tip}">${lbl}</span></td>`;
+          const lbl  = e.client || tmName || e.status;
+          const tip  = [e.client, tmName ? 'ТМ: '+tmName : ''].filter(Boolean).join(' | ');
+          const isCurrent = e.id === currentLeadId;
+          html += `<td class="slot${isCurrent?' current-lead-slot':''}" onclick="openModal('${e.id}','${mgr.id}','${sl}','${ds}')"><span class="cell ${css}" title="${tip}">${lbl}</span></td>`;
         }
       });
     });
     html += '</tr>';
   });
+
   tbl.innerHTML = html + '</tbody>';
 }
 
 // ════════════════════════════════════════════════
-//  АНАЛИТИКА (с переносами)
+//  АНАЛИТИКА
 // ════════════════════════════════════════════════
 function crCell(val) {
   if (val < 0) return '<td class="right">—</td>';
@@ -583,63 +589,47 @@ function crCell(val) {
   return `<td class="right ${cls}">${val}%</td>`;
 }
 
-function getFilteredManagers() {
-  const sel = document.getElementById('mgr-filter');
-  const val = sel ? sel.value : '';
-  return val ? managers.filter(m => m.id === val) : managers;
-}
-
 function renderAnalytics() {
   const ds      = getDates().map(dateKey);
-  const entries = getEntries();
-  const mgrList = getFilteredManagers();
+  const mgrSel  = document.getElementById('mgr-filter');
+  const mgrVal  = mgrSel ? mgrSel.value : '';
+  const mgrList = mgrVal ? managers.filter(m => m.id === mgrVal) : managers;
+  const entries = allEntries.filter(e => e.product === currentProduct && ds.includes(e.date));
+
   let html = '';
-  let totTM = 0, totOwn = 0, totAll = 0, totDone = 0;
-  let totDoneTM = 0, totDoneOwn = 0;
+  let totTM=0,totOwn=0,totAll=0,totDone=0,totDoneTM=0,totDoneOwn=0;
 
   mgrList.forEach(mgr => {
-    const es     = entries.filter(e => e.mgr === mgr.id && ds.includes(e.date));
-    const esTM   = es.filter(e => e.source === 'tm');
-    const esOwn  = es.filter(e => e.source === 'own');
-    const tm     = esTM.length;
-    const own    = esOwn.length;
-    const total  = tm + own;
-    const done   = es.filter(e => e.status === 'done').length;
-    const doneTM  = esTM.filter(e => e.status === 'done').length;
-    const doneOwn = esOwn.filter(e => e.status === 'done').length;
+    const es    = entries.filter(e => e.mgr === mgr.id);
+    const esTM  = es.filter(e => e.source === 'tm');
+    const esOwn = es.filter(e => e.source === 'own');
+    const tm    = esTM.length, own = esOwn.length, total = tm + own;
+    const done     = es.filter(e => e.status === 'done').length;
+    const doneTM   = esTM.filter(e => e.status === 'done').length;
+    const doneOwn  = esOwn.filter(e => e.status === 'done').length;
+    const crTM  = tm    > 0 ? Math.round(doneTM  / tm    * 100) : -1;
+    const crOwn = own   > 0 ? Math.round(doneOwn / own   * 100) : -1;
+    const crAll = total > 0 ? Math.round(done    / total * 100) : -1;
 
-    const crTM   = tm   > 0 ? Math.round(doneTM  / tm   * 100) : -1;
-    const crOwn  = own  > 0 ? Math.round(doneOwn / own  * 100) : -1;
-    const crAll  = total > 0 ? Math.round(done   / total * 100) : -1;
-
-    totTM += tm; totOwn += own; totAll += total;
-    totDone += done; totDoneTM += doneTM; totDoneOwn += doneOwn;
+    totTM+=tm; totOwn+=own; totAll+=total;
+    totDone+=done; totDoneTM+=doneTM; totDoneOwn+=doneOwn;
 
     html += `<tr>
       <td>${mgr.name}</td>
-      <td class="right">${tm}</td>
-      <td class="right">${own}</td>
-      <td class="right">${total}</td>
-      <td class="right">${done}</td>
-      ${crCell(crTM)}
-      ${crCell(crOwn)}
-      ${crCell(crAll)}
+      <td class="right">${tm}</td><td class="right">${own}</td>
+      <td class="right">${total}</td><td class="right">${done}</td>
+      ${crCell(crTM)}${crCell(crOwn)}${crCell(crAll)}
     </tr>`;
   });
 
-  // Итого
   const totCRtm  = totTM   > 0 ? Math.round(totDoneTM  / totTM   * 100) : -1;
   const totCRown = totOwn  > 0 ? Math.round(totDoneOwn / totOwn  * 100) : -1;
   const totCRall = totAll  > 0 ? Math.round(totDone    / totAll  * 100) : -1;
   html += `<tr class="total-row">
     <td>Итого</td>
-    <td class="right">${totTM}</td>
-    <td class="right">${totOwn}</td>
-    <td class="right">${totAll}</td>
-    <td class="right">${totDone}</td>
-    ${crCell(totCRtm)}
-    ${crCell(totCRown)}
-    ${crCell(totCRall)}
+    <td class="right">${totTM}</td><td class="right">${totOwn}</td>
+    <td class="right">${totAll}</td><td class="right">${totDone}</td>
+    ${crCell(totCRtm)}${crCell(totCRown)}${crCell(totCRall)}
   </tr>`;
 
   if (!mgrList.length) html = '<tr><td colspan="8" style="text-align:center;color:#aaa;padding:16px">Нет данных</td></tr>';
@@ -651,16 +641,28 @@ function renderAnalytics() {
 // ════════════════════════════════════════════════
 function openModal(id, mgrId, slot, date) {
   editId = id; modalMgr = mgrId; modalSlot = slot; modalDate = date;
+
   document.getElementById('m-mgr').innerHTML = managers.map(m =>
     `<option value="${m.id}"${m.id === String(mgrId) ? ' selected' : ''}>${m.name}</option>`
   ).join('');
   document.getElementById('m-tm').innerHTML = tms.map(t =>
     `<option value="${t.id}">${t.name}</option>`
   ).join('');
+
   document.getElementById('m-datetime').value = date + 'T' + slot.slice(0, 5);
-  document.getElementById('m-product').value = currentProduct;
+  document.getElementById('m-product').value  = currentProduct;
   document.getElementById('modal-title').textContent = id ? 'Редактировать встречу' : 'Новая встреча';
   document.getElementById('btn-del').style.display = id ? 'block' : 'none';
+
+  // Показать инфо о лиде если есть контекст
+  const leadInfo = document.getElementById('lead-id-info');
+  const activeLeadId = id || currentLeadId;
+  if (activeLeadId) {
+    leadInfo.style.display = 'block';
+    document.getElementById('modal-lead-label').textContent = 'Лид #' + activeLeadId;
+  } else {
+    leadInfo.style.display = 'none';
+  }
 
   if (id) {
     const e = allEntries.find(x => x.id === id);
@@ -672,30 +674,12 @@ function openModal(id, mgrId, slot, date) {
       if (e.tm) document.getElementById('m-tm').value = e.tm;
     }
   } else {
-    document.getElementById('m-source').value = 'tm';
+    // Новый слот — если есть контекст лида, подставляем данные лида
+    document.getElementById('m-source').value = currentLeadId ? 'tm' : 'tm';
     document.getElementById('m-client').value = '';
     document.getElementById('m-status').value = 'assigned';
   }
   toggleTM();
-
-  // Подставить лид из URL если есть
-  if (URL_LEAD_ID) {
-    document.getElementById('m-lead-id').value    = URL_LEAD_ID;
-    document.getElementById('m-lead-title').value = URL_LEAD_TITLE || ('Лид #' + URL_LEAD_ID);
-  } else if (id) {
-    const e = allEntries.find(x => x.id === id);
-    if (e && e.leadId) {
-      document.getElementById('m-lead-id').value    = e.leadId;
-      document.getElementById('m-lead-title').value = e.leadTitle || ('Лид #' + e.leadId);
-    } else {
-      document.getElementById('m-lead-id').value    = '';
-      document.getElementById('m-lead-title').value = '';
-    }
-  } else {
-    document.getElementById('m-lead-id').value    = '';
-    document.getElementById('m-lead-title').value = '';
-  }
-
   document.getElementById('modal-bg').classList.add('open');
 }
 
@@ -704,20 +688,20 @@ function toggleTM() {
     document.getElementById('m-source').value === 'own' ? 'none' : 'block';
 }
 function closeModal() { document.getElementById('modal-bg').classList.remove('open'); }
-document.getElementById('modal-bg').addEventListener('click', e => { if (e.target === e.currentTarget) closeModal(); });
+document.getElementById('modal-bg').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeModal();
+});
 
 // ════════════════════════════════════════════════
 //  ПЕРЕКЛЮЧАТЕЛИ
 // ════════════════════════════════════════════════
-function setProduct(prod, el) {
+function setProduct(prod) {
   currentProduct = prod;
-  // Кнопки
-  document.getElementById('btn-acc').className  = 'tab-btn product-btn' + (prod === 'accounting' ? ' active-acc' : '');
-  document.getElementById('btn-plat').className = 'tab-btn product-btn' + (prod === 'platform'   ? ' active-plat' : '');
-  // Бейдж аналитики
+  document.getElementById('btn-acc').className  = 'tab-btn product-btn' + (prod==='accounting'?' active-acc':'');
+  document.getElementById('btn-plat').className = 'tab-btn product-btn' + (prod==='platform'?' active-plat':'');
   const badge = document.getElementById('analytics-badge');
   badge.textContent = prod === 'accounting' ? 'Аккаунтинг' : 'Платформа';
-  badge.className   = 'product-badge ' + (prod === 'accounting' ? 'badge-acc' : 'badge-plat');
+  badge.className   = 'product-badge ' + (prod==='accounting' ? 'badge-acc' : 'badge-plat');
   renderGrid(); renderAnalytics();
 }
 
@@ -725,21 +709,17 @@ function setPeriod(p, el) {
   period = p;
   document.querySelectorAll('#period-tabs .tab-btn').forEach(t => t.classList.remove('active'));
   el.classList.add('active');
-  // Показать/скрыть поля диапазона
   const ri = document.getElementById('range-inputs');
   const dp = document.getElementById('date-pick');
   if (p === 'range') {
-    ri.style.display = 'flex';
-    dp.style.display = 'none';
-    // Установить дефолтный диапазон — текущий месяц
+    ri.style.display = 'flex'; dp.style.display = 'none';
     const y = currentDate.getFullYear(), m = currentDate.getMonth();
     const from = new Date(y, m, 1), to = new Date(y, m+1, 0);
     document.getElementById('date-from').value = dateKey(from);
     document.getElementById('date-to').value   = dateKey(to);
     dateFrom = from; dateTo = to;
   } else {
-    ri.style.display = 'none';
-    dp.style.display = '';
+    ri.style.display = 'none'; dp.style.display = '';
   }
   loadData();
 }
@@ -761,10 +741,10 @@ function onRangeChange() {
 // ════════════════════════════════════════════════
 //  ЗАГРУЗКА
 // ════════════════════════════════════════════════
-function setStatus(msg, type = '') {
+function setStatus(msg, type='') {
   const el = document.getElementById('status');
   el.textContent = msg;
-  el.className   = 'status-bar' + (type ? ' ' + type : '');
+  el.className   = 'status-bar' + (type ? ' '+type : '');
 }
 
 function log(msg) {
@@ -775,51 +755,62 @@ function log(msg) {
 
 let usersLoaded = false;
 
-async function loadData(forceReloadUsers = false) {
+async function loadData(forceReloadUsers=false) {
+  if (!bx24Ready) return;
   setStatus('Загрузка...', 'loading');
   document.getElementById('grid-loader').style.display = 'block';
   document.getElementById('grid').style.display = 'none';
   document.getElementById('debug-box').innerHTML = '';
 
-  // Загружаем пользователей только один раз (или при явном сбросе)
   if (!usersLoaded || forceReloadUsers) {
     await loadUsers();
     usersLoaded = true;
   }
 
   const dates = getDates();
-  allEntries  = await loadEntries(dateKey(dates[0]), dateKey(dates[dates.length - 1]));
+  allEntries  = await loadEntries(dateKey(dates[0]), dateKey(dates[dates.length-1]));
   setStatus('Обновлено ' + new Date().toLocaleTimeString('ru-RU'));
   renderGrid(); renderAnalytics();
 }
 
-function renderAll() {
-  const dp = document.getElementById('date-pick');
-  if (dp && dp.value) currentDate = new Date(dp.value + 'T12:00:00');
-  loadData();
-}
-
-// ════════════════════════════════════════════════
-//  СТАРТ
-// ════════════════════════════════════════════════
-document.getElementById('date-pick').value = dateKey(currentDate);
-
-// Показать баннер если открыто с lead_id
-if (URL_LEAD_ID) {
-  const banner = document.getElementById('lead-banner');
-  banner.style.display = 'block';
-  document.getElementById('lead-banner-title').textContent =
-    URL_LEAD_TITLE ? URL_LEAD_TITLE + ' (#' + URL_LEAD_ID + ')' : 'Лид #' + URL_LEAD_ID;
-}
-
 function clearLead() {
-  window.history.replaceState({}, '', window.location.pathname);
+  currentLeadId = null;
   document.getElementById('lead-banner').style.display = 'none';
-  document.getElementById('m-lead-id').value = '';
-  document.getElementById('m-lead-title').value = '';
 }
 
-loadData();
+// ════════════════════════════════════════════════
+//  ИНИЦИАЛИЗАЦИЯ BX24
+// ════════════════════════════════════════════════
+BX24.init(function() {
+  bx24Ready = true;
+
+  // Определяем контекст размещения
+  const placement = BX24.placement.info();
+  log('📍 Placement: ' + JSON.stringify(placement));
+
+  if (placement && placement.placement) {
+    const p = placement.placement;
+    const opts = placement.options || {};
+
+    if (p.includes('CRM_LEAD')) {
+      // Открыто из карточки лида
+      currentLeadId = String(opts.ID || opts.id || '');
+      if (currentLeadId) {
+        const banner = document.getElementById('lead-banner');
+        banner.style.display = 'block';
+        document.getElementById('lead-banner-title').textContent = 'Лид #' + currentLeadId;
+      }
+    } else if (p.includes('CRM_DEAL')) {
+      // Открыто из карточки сделки
+      currentDealId = String(opts.ID || opts.id || '');
+    }
+  }
+
+  // Установить текущую дату
+  document.getElementById('date-pick').value = dateKey(currentDate);
+
+  loadData();
+});
 </script>
 </body>
 </html>
