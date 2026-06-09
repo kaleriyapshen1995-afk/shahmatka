@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Шахматка встреч</title>
-<script src="//api.bitrix24.com/api/v1/"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f3;color:#1a1a1a;font-size:13px}
@@ -224,6 +223,8 @@ td.slot.current-lead-slot{background:#EBF5FF}
 // ════════════════════════════════════════════════
 //  КОНФИГ
 // ════════════════════════════════════════════════
+// Вебхук Б24 — прямой вызов, без прокси
+const WEBHOOK = 'https://crm.seller24.ru/rest/5/lugy1ou7q1i8h1zm/';
 const F = {
   date    : 'UF_CRM_1779825187',   // дата/время встречи
   status  : 'UF_CRM_1779825277',   // статус встречи
@@ -261,49 +262,46 @@ let managers       = [];
 let tms            = [];
 let editId         = null, modalMgr, modalSlot, modalDate;
 
-// Контекст BX24
-let currentLeadId  = null;  // ID лида если открыто из лида
-let currentDealId  = null;  // ID сделки если открыто из сделки
-let bx24Ready      = false;
+// Контекст — из URL-параметров (передаётся при открытии из карточки лида/сделки)
+const URL_PARAMS  = new URLSearchParams(window.location.search);
+let currentLeadId = URL_PARAMS.get('lead_id') || null;
+let currentDealId = URL_PARAMS.get('deal_id') || null;
 
 // ════════════════════════════════════════════════
-//  BX24 API
+//  API — прямые вызовы вебхука Б24
 // ════════════════════════════════════════════════
 
-// Одиночный вызов (update/add/delete)
-function apiOne(method, params = {}) {
-  return new Promise((resolve, reject) => {
-    BX24.callMethod(method, params, function(result) {
-      if (result.error()) {
-        const e = result.error();
-        reject(new Error(e.ex?.error_description || e.ex?.error || String(e)));
-      } else {
-        resolve(result.data());
-      }
-    });
+// Одиночный вызов (add/update/delete)
+async function apiOne(method, params = {}) {
+  const r = await fetch(WEBHOOK + method, {
+    method : 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body   : JSON.stringify(params),
   });
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  const d = await r.json();
+  if (d.error) throw new Error(d.error_description || d.error);
+  return d.result;
 }
 
 // Вызов с автопагинацией (list-методы)
-function apiAll(method, params = {}) {
-  return new Promise((resolve, reject) => {
-    const all = [];
-    function handler(result) {
-      if (result.error()) {
-        const e = result.error();
-        reject(new Error(e.ex?.error_description || e.ex?.error || String(e)));
-        return;
-      }
-      const data = result.data();
-      if (Array.isArray(data)) all.push(...data);
-      if (result.more()) {
-        result.next();
-      } else {
-        resolve(all);
-      }
-    }
-    BX24.callMethod(method, params, handler);
-  });
+async function apiAll(method, params = {}) {
+  const all = [];
+  let start = 0;
+  while (true) {
+    const r = await fetch(WEBHOOK + method, {
+      method : 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body   : JSON.stringify({ ...params, start }),
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const d = await r.json();
+    if (d.error) throw new Error(d.error_description || d.error);
+    const items = Array.isArray(d.result) ? d.result : [];
+    all.push(...items);
+    if (d.next) { start = d.next; } else { break; }
+  }
+  return all;
 }
 
 // ════════════════════════════════════════════════
@@ -756,7 +754,6 @@ function log(msg) {
 let usersLoaded = false;
 
 async function loadData(forceReloadUsers=false) {
-  if (!bx24Ready) return;
   setStatus('Загрузка...', 'loading');
   document.getElementById('grid-loader').style.display = 'block';
   document.getElementById('grid').style.display = 'none';
@@ -779,38 +776,17 @@ function clearLead() {
 }
 
 // ════════════════════════════════════════════════
-//  ИНИЦИАЛИЗАЦИЯ BX24
+//  СТАРТ
 // ════════════════════════════════════════════════
-BX24.init(function() {
-  bx24Ready = true;
+document.getElementById('date-pick').value = dateKey(currentDate);
 
-  // Определяем контекст размещения
-  const placement = BX24.placement.info();
-  log('📍 Placement: ' + JSON.stringify(placement));
+if (currentLeadId) {
+  const banner = document.getElementById('lead-banner');
+  banner.style.display = 'block';
+  document.getElementById('lead-banner-title').textContent = 'Лид #' + currentLeadId;
+}
 
-  if (placement && placement.placement) {
-    const p = placement.placement;
-    const opts = placement.options || {};
-
-    if (p.includes('CRM_LEAD')) {
-      // Открыто из карточки лида
-      currentLeadId = String(opts.ID || opts.id || '');
-      if (currentLeadId) {
-        const banner = document.getElementById('lead-banner');
-        banner.style.display = 'block';
-        document.getElementById('lead-banner-title').textContent = 'Лид #' + currentLeadId;
-      }
-    } else if (p.includes('CRM_DEAL')) {
-      // Открыто из карточки сделки
-      currentDealId = String(opts.ID || opts.id || '');
-    }
-  }
-
-  // Установить текущую дату
-  document.getElementById('date-pick').value = dateKey(currentDate);
-
-  loadData();
-});
+loadData();
 </script>
 </body>
 </html>
