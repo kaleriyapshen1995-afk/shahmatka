@@ -284,23 +284,38 @@ async function apiOne(method, params = {}) {
   return d.result;
 }
 
-// Вызов с автопагинацией (list-методы)
+// Вызов с параллельной пагинацией (list-методы)
 async function apiAll(method, params = {}) {
-  const all = [];
-  let start = 0;
-  while (true) {
-    const r = await fetch(WEBHOOK + method, {
+  // Первая страница — узнаём total
+  const r0 = await fetch(WEBHOOK + method, {
+    method : 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body   : JSON.stringify({ ...params, start: 0 }),
+  });
+  if (!r0.ok) throw new Error('HTTP ' + r0.status);
+  const d0 = await r0.json();
+  if (d0.error) throw new Error(d0.error_description || d0.error);
+
+  const all = Array.isArray(d0.result) ? [...d0.result] : [];
+  const total = d0.total || 0;
+  if (!d0.next || all.length >= total) return all;
+
+  // Все оставшиеся страницы — параллельно
+  const starts = [];
+  for (let s = d0.next; s < total; s += 50) starts.push(s);
+
+  const pages = await Promise.all(starts.map(start =>
+    fetch(WEBHOOK + method, {
       method : 'POST',
       headers: { 'Content-Type': 'application/json' },
       body   : JSON.stringify({ ...params, start }),
-    });
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    const d = await r.json();
-    if (d.error) throw new Error(d.error_description || d.error);
-    const items = Array.isArray(d.result) ? d.result : [];
-    all.push(...items);
-    if (d.next) { start = d.next; } else { break; }
+    }).then(r => r.json())
+  ));
+
+  for (const page of pages) {
+    if (Array.isArray(page.result)) all.push(...page.result);
   }
+
   return all;
 }
 
@@ -339,8 +354,7 @@ async function loadEntries(from, to) {
   try {
     const items = await apiAll('crm.lead.list', {
       filter: {
-        ['>=' + F.date]: from + 'T00:00:00+03:00',
-        ['<=' + F.date]: to   + 'T23:59:59+03:00',
+        ['!' + F.date]: false,  // только лиды с заполненной датой встречи
       },
       select: ['ID','TITLE','STATUS_ID','ASSIGNED_BY_ID',
                F.date, F.status, F.tm, F.product],
@@ -348,47 +362,51 @@ async function loadEntries(from, to) {
     });
     log('📅 Лидов со встречами: ' + items.length);
 
-    return items.map(item => {
-      const dt   = item[F.date] || '';
-      const date = dt.slice(0, 10);
-      const hh   = parseInt(dt.slice(11, 13));
-      const slot = (isNaN(hh) ? 9 : hh) + ':00';
-
-      // Статус встречи
-      const rawStatus = item[F.status];
-      const statusArr = Array.isArray(rawStatus)
-        ? rawStatus.map(String)
-        : (rawStatus ? [String(rawStatus)] : []);
-      let statusKey = 'assigned';
-      if      (statusArr.includes(STATUS_IDS.done))      statusKey = 'done';
-      else if (statusArr.includes(STATUS_IDS.moved))     statusKey = 'moved';
-      else if (statusArr.includes(STATUS_IDS.confirmed)) statusKey = 'confirmed';
-      else if (statusArr.includes(STATUS_IDS.assigned))  statusKey = 'assigned';
-      // Статус лида как fallback
-      else if (item.STATUS_ID === 'WON')    statusKey = 'done';
-      else if (item.STATUS_ID === 'JUNK')   statusKey = 'cancel';
-
-      const hasTM  = !!(item[F.tm]);
-      const source = hasTM ? 'tm' : 'own';
-      const mgrId  = String(item[F.manager] || item.ASSIGNED_BY_ID || '');
-
-      const pVal = String(item[F.product] || '');
-      const product = pVal === PRODUCT_IDS.platform ? 'platform' : 'accounting';
-
-      return {
-        id     : String(item.ID),
-        mgr    : mgrId,
-        date, slot, source, product,
-        tm     : String(item[F.tm] || ''),
-        client : String(item.TITLE || ''),
-        status : statusKey,
-      };
+    // Фильтрация по периоду — на клиенте
+    const filtered = items.filter(item => {
+      const d = (item[F.date] || '').slice(0, 10);
+      return d >= from && d <= to;
     });
+    log('📅 За период: ' + filtered.length);
+    return filtered.map(item => mapLead(item));
   } catch (e) {
     setStatus('Ошибка загрузки: ' + e.message, 'error');
     log('❌ loadEntries: ' + e.message);
     return [];
   }
+}
+
+function mapLead(item) {
+  const dt   = item[F.date] || '';
+  const date = dt.slice(0, 10);
+  const hh   = parseInt(dt.slice(11, 13));
+  const slot = (isNaN(hh) ? 9 : hh) + ':00';
+
+  const rawStatus = item[F.status];
+  const statusArr = Array.isArray(rawStatus)
+    ? rawStatus.map(String)
+    : (rawStatus ? [String(rawStatus)] : []);
+  let statusKey = 'assigned';
+  if      (statusArr.includes(STATUS_IDS.done))      statusKey = 'done';
+  else if (statusArr.includes(STATUS_IDS.moved))     statusKey = 'moved';
+  else if (statusArr.includes(STATUS_IDS.confirmed)) statusKey = 'confirmed';
+  else if (statusArr.includes(STATUS_IDS.assigned))  statusKey = 'assigned';
+  else if (item.STATUS_ID === 'WON')                 statusKey = 'done';
+  else if (item.STATUS_ID === 'JUNK')                statusKey = 'cancel';
+
+  const hasTM   = !!(item[F.tm]);
+  const source  = hasTM ? 'tm' : 'own';
+  const mgrId   = String(item[F.manager] || item.ASSIGNED_BY_ID || '');
+  const pVal    = String(item[F.product] || '');
+  const product = pVal === PRODUCT_IDS.platform ? 'platform' : 'accounting';
+
+  return {
+    id: String(item.ID), mgr: mgrId,
+    date, slot, source, product,
+    tm    : String(item[F.tm] || ''),
+    client: String(item.TITLE || ''),
+    status: statusKey,
+  };
 }
 
 // ════════════════════════════════════════════════
