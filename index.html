@@ -320,8 +320,8 @@ async function apiAll(method, params = {}) {
   const starts = [];
   for (let s = d0.next; s < total; s += 50) starts.push(s);
 
-  for (let i = 0; i < starts.length; i += 3) {
-    const batch = starts.slice(i, i + 3);
+  for (let i = 0; i < starts.length; i += 5) {
+    const batch = starts.slice(i, i + 5);
     const pages = await Promise.all(batch.map(start =>
       fetch(WEBHOOK + method, {
         method : 'POST',
@@ -341,9 +341,11 @@ async function apiAll(method, params = {}) {
 //  ПРОСТОЙ КЭШ (sessionStorage, чтобы не дёргать
 //  Б24 заново при каждом открытии карточки лида)
 // ════════════════════════════════════════════════
+// ВАЖНО: localStorage, а не sessionStorage —
+// чтобы кэш переживал переоткрытие iframe в разных карточках лидов/сделок.
 function cacheGet(key, ttlMs) {
   try {
-    const raw = sessionStorage.getItem(key);
+    const raw = localStorage.getItem(key);
     if (!raw) return null;
     const { t, data } = JSON.parse(raw);
     if (Date.now() - t > ttlMs) return null;
@@ -351,7 +353,7 @@ function cacheGet(key, ttlMs) {
   } catch (e) { return null; }
 }
 function cacheSet(key, data) {
-  try { sessionStorage.setItem(key, JSON.stringify({ t: Date.now(), data })); } catch (e) {}
+  try { localStorage.setItem(key, JSON.stringify({ t: Date.now(), data })); } catch (e) {}
 }
 
 // ════════════════════════════════════════════════
@@ -359,7 +361,7 @@ function cacheSet(key, data) {
 // ════════════════════════════════════════════════
 async function loadUsers(force = false) {
   try {
-    const cached = !force && cacheGet('sh_users', 10 * 60 * 1000);
+    const cached = !force && cacheGet('sh_users', 60 * 60 * 1000);
     if (cached) {
       managers = cached.managers;
       tms      = cached.tms;
@@ -425,8 +427,8 @@ async function loadEntries(from, to, force = false) {
       if (d0.next && items.length < total) {
         const starts = [];
         for (let s = d0.next; s < total; s += 50) starts.push(s);
-        for (let i = 0; i < starts.length; i += 3) {
-          const batch = starts.slice(i, i + 3);
+        for (let i = 0; i < starts.length; i += 5) {
+          const batch = starts.slice(i, i + 5);
           const pages = await Promise.all(batch.map(start =>
             apiPage('crm.lead.list', { filter: rangeFilter, select: SELECT, order: ORDER, start })
           ));
@@ -851,27 +853,58 @@ let usersLoaded = false;
 
 async function loadData(forceReloadUsers=false) {
   setStatus('Загрузка...', 'loading');
-  document.getElementById('grid-loader').style.display = 'block';
-  document.getElementById('grid').style.display = 'none';
   document.getElementById('debug-box').innerHTML = '';
 
   const dates = getDates();
   const from  = dateKey(dates[0]);
   const to    = dateKey(dates[dates.length - 1]);
 
-  if (!usersLoaded || forceReloadUsers) {
-    // Загружаем пользователей и лиды параллельно
-    const [_, entries] = await Promise.all([
-      loadUsers(forceReloadUsers),
-      loadEntries(from, to, forceReloadUsers),
-    ]);
+  // ── 1. МГНОВЕННАЯ ОТРИСОВКА ИЗ КЭША ──
+  // Если в localStorage уже есть юзеры и лиды — рендерим прямо сейчас,
+  // не дожидаясь сети. Свежие данные подгрузим в фоне.
+  const cachedUsers = !forceReloadUsers && cacheGet('sh_users', 60 * 60 * 1000);
+  const cachedLeads = !forceReloadUsers && cacheGet('sh_leads_' + from + '_' + to, 90 * 1000);
+
+  if (cachedUsers && cachedLeads) {
+    managers = cachedUsers.managers;
+    tms      = cachedUsers.tms;
+    const sel = document.getElementById('mgr-filter');
+    if (sel) {
+      const cur = sel.value;
+      sel.innerHTML = '<option value="">Все менеджеры</option>' +
+        managers.map(m => `<option value="${m.id}"${m.id===cur?' selected':''}>${m.name}</option>`).join('');
+    }
+    allEntries = cachedLeads.map(item => mapLead(item));
+    document.getElementById('grid-loader').style.display = 'none';
+    document.getElementById('grid').style.display = '';
+    renderGrid(); renderAnalytics();
+    setStatus('Из кэша, обновляем...', 'loading');
     usersLoaded = true;
-    allEntries  = entries;
   } else {
-    allEntries = await loadEntries(from, to);
+    document.getElementById('grid-loader').style.display = 'block';
+    document.getElementById('grid').style.display = 'none';
   }
-  setStatus('Обновлено ' + new Date().toLocaleTimeString('ru-RU'));
-  renderGrid(); renderAnalytics();
+
+  // ── 2. ФОНОВОЕ ОБНОВЛЕНИЕ ──
+  try {
+    if (!usersLoaded || forceReloadUsers) {
+      const [_, entries] = await Promise.all([
+        loadUsers(forceReloadUsers),
+        loadEntries(from, to, forceReloadUsers),
+      ]);
+      usersLoaded = true;
+      allEntries  = entries;
+    } else {
+      allEntries = await loadEntries(from, to, forceReloadUsers);
+    }
+    document.getElementById('grid-loader').style.display = 'none';
+    document.getElementById('grid').style.display = '';
+    setStatus('Обновлено ' + new Date().toLocaleTimeString('ru-RU'));
+    renderGrid(); renderAnalytics();
+  } catch (e) {
+    setStatus('Ошибка: ' + e.message, 'error');
+    log('❌ loadData: ' + e.message);
+  }
 }
 
 function clearLead() {
@@ -902,7 +935,7 @@ function loadBX24() {
     s.onload  = () => resolve();
     s.onerror = () => reject(new Error('не загрузился'));
     document.head.appendChild(s);
-    setTimeout(() => reject(new Error('таймаут')), 6000);
+    setTimeout(() => reject(new Error('таймаут')), 3000);
   });
 }
 
