@@ -290,6 +290,16 @@ async function apiOne(method, params = {}) {
   return d.result;
 }
 
+// Одна страница "как есть" (с total/next), не бросает на ошибке фильтра
+async function apiPage(method, params = {}) {
+  const r = await fetch(WEBHOOK + method, {
+    method : 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body   : JSON.stringify(params),
+  });
+  return r.json();
+}
+
 // Вызов с параллельной пагинацией (list-методы)
 async function apiAll(method, params = {}) {
   // Первая страница — узнаём total
@@ -391,28 +401,63 @@ async function loadUsers(force = false) {
 // ════════════════════════════════════════════════
 async function loadEntries(from, to, force = false) {
   try {
-    let items = !force && cacheGet('sh_leads', 90 * 1000);
+    const SELECT = ['ID','TITLE','STATUS_ID','ASSIGNED_BY_ID', F.date, F.status, F.tm, F.product];
+    const ORDER  = { [F.date]: 'ASC' };
+    const cacheKey = 'sh_leads_' + from + '_' + to;
+
+    let items = !force && cacheGet(cacheKey, 90 * 1000);
     if (items) {
-      log('📅 Лидов со встречами: ' + items.length + ' (кэш)');
-    } else {
-      items = await apiAll('crm.lead.list', {
-        filter: {
-          ['!' + F.date]: false,  // только лиды с заполненной датой встречи
-        },
-        select: ['ID','TITLE','STATUS_ID','ASSIGNED_BY_ID',
-                 F.date, F.status, F.tm, F.product],
-        order: { [F.date]: 'ASC' },
-      });
-      cacheSet('sh_leads', items);
-      log('📅 Лидов со встречами: ' + items.length);
+      log('📅 За период: ' + items.length + ' (кэш)');
+      return items.map(item => mapLead(item));
     }
 
-    // Фильтрация по периоду — на клиенте
+    const t0 = performance.now();
+    const fromISO = from + 'T00:00:00';
+    const toISO   = to   + 'T23:59:59';
+    const rangeFilter = { ['>=' + F.date]: fromISO, ['<=' + F.date]: toISO };
+
+    // Пробуем серверную фильтрацию по диапазону дат (быстрый путь)
+    const d0 = await apiPage('crm.lead.list', { filter: rangeFilter, select: SELECT, order: ORDER, start: 0 });
+
+    if (!d0.error && (d0.total || 0) > 0) {
+      items = Array.isArray(d0.result) ? [...d0.result] : [];
+      const total = d0.total;
+      if (d0.next && items.length < total) {
+        const starts = [];
+        for (let s = d0.next; s < total; s += 50) starts.push(s);
+        for (let i = 0; i < starts.length; i += 3) {
+          const batch = starts.slice(i, i + 3);
+          const pages = await Promise.all(batch.map(start =>
+            apiPage('crm.lead.list', { filter: rangeFilter, select: SELECT, order: ORDER, start })
+          ));
+          for (const page of pages) if (Array.isArray(page.result)) items.push(...page.result);
+        }
+      }
+      log('✅ Серверный фильтр по дате: ' + total + ' за ' + Math.round(performance.now() - t0) + 'мс');
+    } else {
+      // Серверный фильтр не дал результата (или ошибка) — берём общий список
+      log('⚠️ Серверный фильтр по дате пуст' + (d0.error ? (' (ошибка: ' + (d0.error_description || d0.error) + ')') : '') + ' — грузим общий список');
+      let all = cacheGet('sh_leads_all', 90 * 1000);
+      if (!all) {
+        all = await apiAll('crm.lead.list', {
+          filter: { ['!' + F.date]: false },
+          select: SELECT, order: ORDER,
+        });
+        cacheSet('sh_leads_all', all);
+        log('📅 Всего лидов с заполненной датой: ' + all.length);
+      } else {
+        log('📅 Всего лидов с заполненной датой: ' + all.length + ' (кэш)');
+      }
+      items = all;
+    }
+
+    // Подстраховка — фильтрация по периоду на клиенте
     const filtered = items.filter(item => {
       const d = (item[F.date] || '').slice(0, 10);
       return d >= from && d <= to;
     });
-    log('📅 За период: ' + filtered.length);
+    cacheSet(cacheKey, filtered);
+    log('📅 За период: ' + filtered.length + ' (' + Math.round(performance.now() - t0) + 'мс)');
     return filtered.map(item => mapLead(item));
   } catch (e) {
     setStatus('Ошибка загрузки: ' + e.message, 'error');
@@ -860,12 +905,45 @@ async function checkPlacements() {
   try {
     await loadBX24();
   } catch (e) {
-    log('⚠️ BX24.js: ' + e.message + ' (привязка вкладок недоступна)');
+    log('⚠️ BX24.js: ' + e.message + ' (привязка вкладок и автоопределение лида недоступны)');
     return;
   }
-  BX24.init(function () {
+  BX24.init(async function () {
+    // 1. Определяем, из какой карточки открыта вкладка (лид/сделка),
+    //    и подтягиваем нужный лид автоматически.
+    try {
+      const info = BX24.placement.info();
+      log('📍 Placement: ' + info.placement + (info.options ? ' ' + JSON.stringify(info.options) : ''));
+      const opts = info.options || {};
+      const entityId = opts.ID || opts.id || opts.ENTITY_ID || opts.entityId;
+
+      if (entityId && info.placement === 'CRM_LEAD_DETAIL_TAB') {
+        currentLeadId = String(entityId);
+        showLeadBanner();
+        renderGrid();
+      } else if (entityId && info.placement === 'CRM_DEAL_DETAIL_TAB') {
+        currentDealId = String(entityId);
+        try {
+          const deal = await apiOne('crm.deal.get', { id: entityId });
+          if (deal && deal.LEAD_ID) {
+            currentLeadId = String(deal.LEAD_ID);
+            showLeadBanner();
+            renderGrid();
+            log('📎 Лид сделки #' + currentDealId + ': #' + currentLeadId);
+          } else {
+            log('⚠️ У сделки #' + currentDealId + ' не найден связанный лид (LEAD_ID)');
+          }
+        } catch (e) {
+          log('⚠️ crm.deal.get: ' + e.message);
+        }
+      }
+    } catch (e) {
+      log('⚠️ placement.info: ' + e.message);
+    }
+
+    // 2. Проверяем, привязана ли вкладка к карточкам лида/сделки
     BX24.callMethod('placement.get', {}, function (result) {
-      if (result.error()) { console.warn('placement.get error', result.error()); return; }
+      if (result.error()) { log('⚠️ placement.get: ' + JSON.stringify(result.error())); return; }
       const bound = (result.data() || []).map(p => p.placement);
       const missing = PLACEMENTS.filter(p => !bound.includes(p));
       if (missing.length) {
@@ -917,11 +995,13 @@ function registerPlacements() {
 // ════════════════════════════════════════════════
 document.getElementById('date-pick').value = dateKey(currentDate);
 
-if (currentLeadId) {
+function showLeadBanner() {
   const banner = document.getElementById('lead-banner');
   banner.style.display = 'block';
   document.getElementById('lead-banner-title').textContent = 'Лид #' + currentLeadId;
 }
+
+if (currentLeadId) showLeadBanner();
 
 checkPlacements();
 loadData();
