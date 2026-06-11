@@ -418,40 +418,45 @@ async function loadEntries(from, to, force = false) {
     const toISO   = to   + 'T23:59:59';
     const rangeFilter = { ['>=' + F.date]: fromISO, ['<=' + F.date]: toISO };
 
-    // Пробуем серверную фильтрацию по диапазону дат (быстрый путь)
+    // Серверная фильтрация по диапазону дат — единственный путь.
+    // Никаких fallback'ов с загрузкой всей базы лидов!
     const d0 = await apiPage('crm.lead.list', { filter: rangeFilter, select: SELECT, order: ORDER, start: 0 });
 
-    if (!d0.error && (d0.total || 0) > 0) {
-      items = Array.isArray(d0.result) ? [...d0.result] : [];
-      const total = d0.total;
-      if (d0.next && items.length < total) {
-        const starts = [];
-        for (let s = d0.next; s < total; s += 50) starts.push(s);
-        for (let i = 0; i < starts.length; i += 5) {
-          const batch = starts.slice(i, i + 5);
-          const pages = await Promise.all(batch.map(start =>
-            apiPage('crm.lead.list', { filter: rangeFilter, select: SELECT, order: ORDER, start })
-          ));
-          for (const page of pages) if (Array.isArray(page.result)) items.push(...page.result);
-        }
-      }
-      log('✅ Серверный фильтр по дате: ' + total + ' за ' + Math.round(performance.now() - t0) + 'мс');
-    } else {
-      // Серверный фильтр не дал результата (или ошибка) — берём общий список
-      log('⚠️ Серверный фильтр по дате пуст' + (d0.error ? (' (ошибка: ' + (d0.error_description || d0.error) + ')') : '') + ' — грузим общий список');
-      let all = cacheGet('sh_leads_all', 90 * 1000);
-      if (!all) {
-        all = await apiAll('crm.lead.list', {
-          filter: { ['!' + F.date]: false },
-          select: SELECT, order: ORDER,
-        });
-        cacheSet('sh_leads_all', all);
-        log('📅 Всего лидов с заполненной датой: ' + all.length);
-      } else {
-        log('📅 Всего лидов с заполненной датой: ' + all.length + ' (кэш)');
-      }
-      items = all;
+    if (d0.error) {
+      log('❌ Ошибка фильтра по дате: ' + (d0.error_description || d0.error));
+      setStatus('Ошибка фильтра: ' + (d0.error_description || d0.error), 'error');
+      return [];
     }
+
+    items = Array.isArray(d0.result) ? [...d0.result] : [];
+    const total = d0.total || 0;
+
+    if (total === 0) {
+      log('📅 За период встреч нет (0 лидов)');
+      cacheSet(cacheKey, []);
+      return [];
+    }
+
+    // 🛑 СТОП-КРАН: если Б24 вернул больше 200 лидов на одну дату/период,
+    // значит серверный фильтр по UF-полю не работает (вернул всю базу).
+    // Не грузим лавиной — берём только первую страницу и фильтруем на клиенте.
+    const HARD_LIMIT = 200;
+    if (total > HARD_LIMIT) {
+      log('🛑 Б24 вернул ' + total + ' лидов — фильтр по UF-дате не работает. Беру только первые 50.');
+      setStatus('Фильтр Б24 не работает по UF-полю (total=' + total + ')', 'error');
+    } else if (d0.next && items.length < total) {
+      // Догружаем остальные страницы параллельно
+      const starts = [];
+      for (let s = d0.next; s < total; s += 50) starts.push(s);
+      for (let i = 0; i < starts.length; i += 5) {
+        const batch = starts.slice(i, i + 5);
+        const pages = await Promise.all(batch.map(start =>
+          apiPage('crm.lead.list', { filter: rangeFilter, select: SELECT, order: ORDER, start })
+        ));
+        for (const page of pages) if (Array.isArray(page.result)) items.push(...page.result);
+      }
+    }
+    log('✅ Загружено: ' + items.length + '/' + total + ' за ' + Math.round(performance.now() - t0) + 'мс');
 
     // Подстраховка — фильтрация по периоду на клиенте
     const filtered = items.filter(item => {
@@ -893,17 +898,21 @@ async function loadData(forceReloadUsers=false) {
         loadEntries(from, to, forceReloadUsers),
       ]);
       usersLoaded = true;
-      allEntries  = entries;
+      allEntries  = entries || [];
     } else {
-      allEntries = await loadEntries(from, to, forceReloadUsers);
+      allEntries = (await loadEntries(from, to, forceReloadUsers)) || [];
     }
-    document.getElementById('grid-loader').style.display = 'none';
-    document.getElementById('grid').style.display = '';
     setStatus('Обновлено ' + new Date().toLocaleTimeString('ru-RU'));
-    renderGrid(); renderAnalytics();
   } catch (e) {
     setStatus('Ошибка: ' + e.message, 'error');
     log('❌ loadData: ' + e.message);
+    if (!Array.isArray(allEntries)) allEntries = [];
+  } finally {
+    // Сетка показывается ВСЕГДА, даже при ошибке или пустых данных
+    document.getElementById('grid-loader').style.display = 'none';
+    document.getElementById('grid').style.display = '';
+    renderGrid();
+    renderAnalytics();
   }
 }
 
