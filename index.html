@@ -93,6 +93,12 @@ td.slot.current-lead-slot{background:#EBF5FF}
   <a href="javascript:void(0)" onclick="clearLead()" style="margin-left:12px;color:#888;font-size:11px">✕ убрать</a>
 </div>
 
+<div id="placement-banner" style="display:none;background:#FFF8E1;border-bottom:1px solid #F0DDA0;padding:8px 16px;font-size:12px;color:#8a6d00">
+  ⚙️ Вкладка «Шахматка» ещё не привязана к карточке лида/сделки.
+  <a href="javascript:void(0)" onclick="registerPlacements()" style="margin-left:8px;color:#185FA5;font-weight:600">Привязать сейчас</a>
+  <span id="placement-status" style="margin-left:8px"></span>
+</div>
+
 <div class="topbar">
   <strong>Шахматка встреч</strong>
 
@@ -219,6 +225,7 @@ td.slot.current-lead-slot{background:#EBF5FF}
   </div>
 </div>
 
+<script src="//api.bitrix24.com/api/v1/"></script>
 <script>
 // ════════════════════════════════════════════════
 //  КОНФИГ
@@ -300,20 +307,22 @@ async function apiAll(method, params = {}) {
   const total = d0.total || 0;
   if (!d0.next || all.length >= total) return all;
 
-  // Все оставшиеся страницы — параллельно
+  // Оставшиеся страницы — параллельно, но не более 3 одновременно
   const starts = [];
   for (let s = d0.next; s < total; s += 50) starts.push(s);
 
-  const pages = await Promise.all(starts.map(start =>
-    fetch(WEBHOOK + method, {
-      method : 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body   : JSON.stringify({ ...params, start }),
-    }).then(r => r.json())
-  ));
-
-  for (const page of pages) {
-    if (Array.isArray(page.result)) all.push(...page.result);
+  for (let i = 0; i < starts.length; i += 3) {
+    const batch = starts.slice(i, i + 3);
+    const pages = await Promise.all(batch.map(start =>
+      fetch(WEBHOOK + method, {
+        method : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body   : JSON.stringify({ ...params, start }),
+      }).then(r => r.json())
+    ));
+    for (const page of pages) {
+      if (Array.isArray(page.result)) all.push(...page.result);
+    }
   }
 
   return all;
@@ -790,6 +799,64 @@ function clearLead() {
 }
 
 // ════════════════════════════════════════════════
+//  ПРИВЯЗКА ВКЛАДКИ К ЛИДУ/СДЕЛКЕ (placement.bind)
+// ════════════════════════════════════════════════
+// Адрес, по которому открыта эта же шахматка (страница приложения)
+const HANDLER_URL = window.location.origin + window.location.pathname;
+const PLACEMENTS  = ['CRM_LEAD_DETAIL_TAB', 'CRM_DEAL_DETAIL_TAB'];
+
+function checkPlacements() {
+  if (typeof BX24 === 'undefined') return;
+  BX24.init(function () {
+    BX24.callMethod('placement.get', {}, function (result) {
+      if (result.error()) { console.warn('placement.get error', result.error()); return; }
+      const bound = (result.data() || []).map(p => p.placement);
+      const missing = PLACEMENTS.filter(p => !bound.includes(p));
+      if (missing.length) {
+        document.getElementById('placement-banner').style.display = 'block';
+      }
+    });
+  });
+}
+
+function registerPlacements() {
+  if (typeof BX24 === 'undefined') {
+    alert('BX24 недоступен. Откройте шахматку внутри Битрикс24.');
+    return;
+  }
+  const statusEl = document.getElementById('placement-status');
+  statusEl.textContent = 'Привязываем...';
+
+  let pending = PLACEMENTS.length;
+  let errors  = [];
+
+  PLACEMENTS.forEach(placement => {
+    BX24.callMethod('placement.bind', {
+      PLACEMENT : placement,
+      HANDLER   : HANDLER_URL,
+      TITLE     : 'Шахматка',
+    }, function (result) {
+      pending--;
+      if (result.error()) {
+        const err = result.error();
+        // already bound — не считаем ошибкой
+        if (!(err.ex && /already/i.test(err.ex.error_description || ''))) {
+          errors.push(placement + ': ' + (err.ex ? err.ex.error_description : JSON.stringify(err)));
+        }
+      }
+      if (pending === 0) {
+        if (errors.length) {
+          statusEl.textContent = 'Ошибка: ' + errors.join('; ');
+        } else {
+          statusEl.textContent = 'Готово! Обновите карточку лида/сделки.';
+          setTimeout(() => { document.getElementById('placement-banner').style.display = 'none'; }, 4000);
+        }
+      }
+    });
+  });
+}
+
+// ════════════════════════════════════════════════
 //  СТАРТ
 // ════════════════════════════════════════════════
 document.getElementById('date-pick').value = dateKey(currentDate);
@@ -800,6 +867,7 @@ if (currentLeadId) {
   document.getElementById('lead-banner-title').textContent = 'Лид #' + currentLeadId;
 }
 
+checkPlacements();
 loadData();
 </script>
 </body>
