@@ -225,7 +225,6 @@ td.slot.current-lead-slot{background:#EBF5FF}
   </div>
 </div>
 
-<script src="//api.bitrix24.com/api/v1/"></script>
 <script>
 // ════════════════════════════════════════════════
 //  КОНФИГ
@@ -329,10 +328,40 @@ async function apiAll(method, params = {}) {
 }
 
 // ════════════════════════════════════════════════
+//  ПРОСТОЙ КЭШ (sessionStorage, чтобы не дёргать
+//  Б24 заново при каждом открытии карточки лида)
+// ════════════════════════════════════════════════
+function cacheGet(key, ttlMs) {
+  try {
+    const raw = sessionStorage.getItem(key);
+    if (!raw) return null;
+    const { t, data } = JSON.parse(raw);
+    if (Date.now() - t > ttlMs) return null;
+    return data;
+  } catch (e) { return null; }
+}
+function cacheSet(key, data) {
+  try { sessionStorage.setItem(key, JSON.stringify({ t: Date.now(), data })); } catch (e) {}
+}
+
+// ════════════════════════════════════════════════
 //  ПОЛЬЗОВАТЕЛИ
 // ════════════════════════════════════════════════
-async function loadUsers() {
+async function loadUsers(force = false) {
   try {
+    const cached = !force && cacheGet('sh_users', 10 * 60 * 1000);
+    if (cached) {
+      managers = cached.managers;
+      tms      = cached.tms;
+      log('👥 Менеджеры: ' + managers.length + '  📞 ТМ: ' + tms.length + ' (кэш)');
+      const sel = document.getElementById('mgr-filter');
+      if (sel) {
+        const cur = sel.value;
+        sel.innerHTML = '<option value="">Все менеджеры</option>' +
+          managers.map(m => `<option value="${m.id}"${m.id===cur?' selected':''}>${m.name}</option>`).join('');
+      }
+      return;
+    }
     // Загружаем менеджеров и ТМ параллельно
     const [listOP, listTM] = await Promise.all([
       apiAll('user.get', { filter: { ACTIVE: true, UF_DEPARTMENT: 17  }, select: ['ID','NAME','LAST_NAME'] }),
@@ -342,6 +371,7 @@ async function loadUsers() {
     const toUser = u => ({ id: String(u.ID), name: (u.NAME + ' ' + u.LAST_NAME).trim() });
     managers = listOP.map(toUser);
     tms      = listTM.map(toUser);
+    cacheSet('sh_users', { managers, tms });
     log('👥 Менеджеры: ' + managers.length + '  📞 ТМ: ' + tms.length);
 
     const sel = document.getElementById('mgr-filter');
@@ -359,17 +389,23 @@ async function loadUsers() {
 // ════════════════════════════════════════════════
 //  ЛИДЫ → ВСТРЕЧИ
 // ════════════════════════════════════════════════
-async function loadEntries(from, to) {
+async function loadEntries(from, to, force = false) {
   try {
-    const items = await apiAll('crm.lead.list', {
-      filter: {
-        ['!' + F.date]: false,  // только лиды с заполненной датой встречи
-      },
-      select: ['ID','TITLE','STATUS_ID','ASSIGNED_BY_ID',
-               F.date, F.status, F.tm, F.product],
-      order: { [F.date]: 'ASC' },
-    });
-    log('📅 Лидов со встречами: ' + items.length);
+    let items = !force && cacheGet('sh_leads', 90 * 1000);
+    if (items) {
+      log('📅 Лидов со встречами: ' + items.length + ' (кэш)');
+    } else {
+      items = await apiAll('crm.lead.list', {
+        filter: {
+          ['!' + F.date]: false,  // только лиды с заполненной датой встречи
+        },
+        select: ['ID','TITLE','STATUS_ID','ASSIGNED_BY_ID',
+                 F.date, F.status, F.tm, F.product],
+        order: { [F.date]: 'ASC' },
+      });
+      cacheSet('sh_leads', items);
+      log('📅 Лидов со встречами: ' + items.length);
+    }
 
     // Фильтрация по периоду — на клиенте
     const filtered = items.filter(item => {
@@ -781,8 +817,8 @@ async function loadData(forceReloadUsers=false) {
   if (!usersLoaded || forceReloadUsers) {
     // Загружаем пользователей и лиды параллельно
     const [_, entries] = await Promise.all([
-      loadUsers(),
-      loadEntries(from, to),
+      loadUsers(forceReloadUsers),
+      loadEntries(from, to, forceReloadUsers),
     ]);
     usersLoaded = true;
     allEntries  = entries;
@@ -805,8 +841,28 @@ function clearLead() {
 const HANDLER_URL = window.location.origin + window.location.pathname;
 const PLACEMENTS  = ['CRM_LEAD_DETAIL_TAB', 'CRM_DEAL_DETAIL_TAB'];
 
-function checkPlacements() {
-  if (typeof BX24 === 'undefined') return;
+// Грузим BX24.js асинхронно, в фоне — чтобы НЕ блокировать загрузку
+// шахматки, если api.bitrix24.com недоступен/медленный.
+function loadBX24() {
+  return new Promise((resolve, reject) => {
+    if (typeof BX24 !== 'undefined') return resolve();
+    const s = document.createElement('script');
+    s.src = '//api.bitrix24.com/api/v1/';
+    s.async = true;
+    s.onload  = () => resolve();
+    s.onerror = () => reject(new Error('не загрузился'));
+    document.head.appendChild(s);
+    setTimeout(() => reject(new Error('таймаут')), 6000);
+  });
+}
+
+async function checkPlacements() {
+  try {
+    await loadBX24();
+  } catch (e) {
+    log('⚠️ BX24.js: ' + e.message + ' (привязка вкладок недоступна)');
+    return;
+  }
   BX24.init(function () {
     BX24.callMethod('placement.get', {}, function (result) {
       if (result.error()) { console.warn('placement.get error', result.error()); return; }
