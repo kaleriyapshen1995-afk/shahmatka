@@ -134,6 +134,7 @@ td.slot.current-lead-slot{background:#EBF5FF}
   </select>
 
   <button class="btn-refresh" onclick="loadData(true)">↻ Обновить</button>
+  <button class="btn-refresh" id="btn-bind" onclick="registerPlacements()" style="background:#185FA5;color:#fff;border-color:#185FA5">📎 Привязать к лидам/сделкам</button>
   <span class="status-bar" id="status">Инициализация...</span>
 </div>
 
@@ -994,7 +995,12 @@ async function checkPlacements() {
       const bound = (result.data() || []).map(p => p.placement);
       const missing = PLACEMENTS.filter(p => !bound.includes(p));
       if (missing.length) {
+        log('🔧 Не привязано: ' + missing.join(', ') + ' — привязываю автоматически...');
         document.getElementById('placement-banner').style.display = 'block';
+        // Автоматический вызов привязки
+        registerPlacements();
+      } else {
+        log('✅ Все placement привязаны: ' + bound.join(', '));
       }
     });
   });
@@ -1028,8 +1034,10 @@ function registerPlacements() {
       if (pending === 0) {
         if (errors.length) {
           statusEl.textContent = 'Ошибка: ' + errors.join('; ');
+          alert('❌ Ошибка привязки:\n' + errors.join('\n'));
         } else {
           statusEl.textContent = 'Готово! Обновите карточку лида/сделки.';
+          alert('✅ Готово! Шахматка привязана к карточкам лидов и сделок.\n\nТеперь обновите Б24 (F5) и откройте любого лида — там появится вкладка «Шахматка».');
           setTimeout(() => { document.getElementById('placement-banner').style.display = 'none'; }, 4000);
         }
       }
