@@ -231,7 +231,7 @@ td.slot.current-lead-slot{background:#EBF5FF}
 //  КОНФИГ
 // ════════════════════════════════════════════════
 // Вебхук Б24 — прямой вызов, без прокси
-const WEBHOOK = 'https://crm.seller24.ru/rest/5/lugy1ou7q1i8h1zm/';
+const WEBHOOK = 'https://crm.seller24.ru/rest/5/9yr3u419ap9cvzn7/';
 const F = {
   date    : 'UF_CRM_1779825187',   // дата/время встречи
   status  : 'UF_CRM_1779825277',   // статус встречи
@@ -1008,7 +1008,7 @@ async function checkPlacements() {
 
 // Прямые REST вызовы к вебхуку (минуя BX24.js) — на случай если BX24 виснет.
 // ВАЖНО: у вебхука должно быть право "Встраивание приложений (placement)".
-const WEBHOOK_URL = 'https://crm.seller24.ru/rest/5/lugy1ou7q1i8h1zm';
+const WEBHOOK_URL = 'https://crm.seller24.ru/rest/5/9yr3u419ap9cvzn7';
 
 function bindOne(placement) {
   // Пробуем через BX24 с таймаутом 8 сек; если не отвечает — fallback на webhook
