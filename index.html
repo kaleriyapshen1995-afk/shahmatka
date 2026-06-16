@@ -1007,15 +1007,32 @@ async function checkPlacements() {
 }
 
 function registerPlacements() {
+  const btn = document.getElementById('btn-bind');
+  const statusEl = document.getElementById('placement-status');
+
+  const setBtn = (text, color) => {
+    if (btn) {
+      btn.textContent = text;
+      if (color) { btn.style.background = color; btn.style.borderColor = color; }
+    }
+  };
+
+  setBtn('⏳ Проверяю BX24...');
+  log('🔧 registerPlacements: старт');
+
   if (typeof BX24 === 'undefined') {
-    alert('BX24 недоступен. Откройте шахматку внутри Битрикс24.');
+    log('❌ BX24 не загружен (typeof === undefined)');
+    setBtn('❌ BX24 не загружен — открой через "Перейти к приложению"', '#c0392b');
     return;
   }
-  const statusEl = document.getElementById('placement-status');
-  statusEl.textContent = 'Привязываем...';
+
+  log('✅ BX24 доступен, привязываю ' + PLACEMENTS.length + ' placement...');
+  setBtn('⏳ Привязываю...');
+  if (statusEl) statusEl.textContent = 'Привязываем...';
 
   let pending = PLACEMENTS.length;
   let errors  = [];
+  let ok = 0;
 
   PLACEMENTS.forEach(placement => {
     BX24.callMethod('placement.bind', {
@@ -1026,18 +1043,25 @@ function registerPlacements() {
       pending--;
       if (result.error()) {
         const err = result.error();
-        // already bound — не считаем ошибкой
-        if (!(err.ex && /already/i.test(err.ex.error_description || ''))) {
-          errors.push(placement + ': ' + (err.ex ? err.ex.error_description : JSON.stringify(err)));
+        if (err.ex && /already/i.test(err.ex.error_description || '')) {
+          log('☑ ' + placement + ': уже привязан');
+          ok++;
+        } else {
+          const msg = placement + ': ' + (err.ex ? err.ex.error_description : JSON.stringify(err));
+          errors.push(msg);
+          log('❌ ' + msg);
         }
+      } else {
+        log('✅ ' + placement + ': привязан');
+        ok++;
       }
       if (pending === 0) {
         if (errors.length) {
-          statusEl.textContent = 'Ошибка: ' + errors.join('; ');
-          alert('❌ Ошибка привязки:\n' + errors.join('\n'));
+          setBtn('❌ Ошибка (' + errors.length + ')', '#c0392b');
+          if (statusEl) statusEl.textContent = 'Ошибка: ' + errors.join('; ');
         } else {
-          statusEl.textContent = 'Готово! Обновите карточку лида/сделки.';
-          alert('✅ Готово! Шахматка привязана к карточкам лидов и сделок.\n\nТеперь обновите Б24 (F5) и откройте любого лида — там появится вкладка «Шахматка».');
+          setBtn('✅ Привязано! Обнови Б24 (F5)', '#3B6D11');
+          if (statusEl) statusEl.textContent = 'Готово! Обновите карточку лида/сделки.';
           setTimeout(() => { document.getElementById('placement-banner').style.display = 'none'; }, 4000);
         }
       }
