@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Установка приложения «Шахматка»</title>
+  <script src="//api.bitrix24.com/api/v1/"></script>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+           padding: 30px; background: #f4f6f8; color: #2C3034; }
+    h1 { color: #185FA5; }
+    .card { background: #fff; padding: 24px; border-radius: 8px;
+            max-width: 600px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+    .status { padding: 12px 16px; border-radius: 6px; margin: 16px 0;
+              font-weight: 500; }
+    .status.loading { background: #FFF7CC; color: #855C00; }
+    .status.ok      { background: #DEF2D1; color: #3B6D11; }
+    .status.error   { background: #FFD8D8; color: #8B0000; }
+    ul { list-style: none; padding: 0; margin: 16px 0; }
+    li { padding: 8px 12px; margin: 4px 0; border-radius: 4px; background: #F6F7F8;
+         font-family: 'Courier New', monospace; font-size: 13px; }
+    li.ok    { background: #DEF2D1; color: #3B6D11; }
+    li.err   { background: #FFD8D8; color: #8B0000; }
+    button { background: #185FA5; color: #fff; border: 0; padding: 10px 20px;
+             border-radius: 6px; font-size: 15px; cursor: pointer; margin-top: 12px; }
+    button:hover { background: #0E4275; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>🚀 Установка «Шахматка встреч»</h1>
+    <div class="status loading" id="status">Подключение к Битрикс24...</div>
+    <ul id="log"></ul>
+    <button id="retry" onclick="runBind()" style="display:none">↻ Попробовать ещё раз</button>
+  </div>
+
+  <script>
+    const HANDLER_URL = 'https://kaleriyapshen1995-afk.github.io/shahmatka/';
+    const PLACEMENTS = [
+      { code: 'CRM_LEAD_DETAIL_TAB',  title: 'Шахматка' },
+      { code: 'CRM_DEAL_DETAIL_TAB',  title: 'Шахматка' },
+      { code: 'CRM_LEAD_LIST_MENU',   title: 'Шахматка' },
+      { code: 'CRM_DEAL_LIST_MENU',   title: 'Шахматка' },
+    ];
+
+    const $status = document.getElementById('status');
+    const $log    = document.getElementById('log');
+    const $retry  = document.getElementById('retry');
+
+    function setStatus(text, cls) {
+      $status.textContent = text;
+      $status.className = 'status ' + cls;
+    }
+    function addLog(text, cls) {
+      const li = document.createElement('li');
+      li.textContent = text;
+      if (cls) li.className = cls;
+      $log.appendChild(li);
+    }
+
+    function runBind() {
+      $log.innerHTML = '';
+      $retry.style.display = 'none';
+      setStatus('Регистрирую места встройки...', 'loading');
+
+      if (typeof BX24 === 'undefined') {
+        setStatus('❌ BX24.js не загрузился. Откройте страницу через интерфейс Б24.', 'error');
+        return;
+      }
+
+      let done = 0, ok = 0;
+      const errors = [];
+
+      PLACEMENTS.forEach(({ code, title }) => {
+        BX24.callMethod('placement.bind', {
+          PLACEMENT : code,
+          HANDLER   : HANDLER_URL,
+          TITLE     : title,
+        }, function (result) {
+          done++;
+          if (result.error()) {
+            const err = result.error();
+            const msg = err.ex ? err.ex.error_description : JSON.stringify(err);
+            if (/already/i.test(msg || '')) {
+              addLog('☑ ' + code + ' — уже привязан', 'ok');
+              ok++;
+            } else {
+              addLog('❌ ' + code + ' — ' + msg, 'err');
+              errors.push(code + ': ' + msg);
+            }
+          } else {
+            addLog('✅ ' + code + ' — привязан', 'ok');
+            ok++;
+          }
+
+          if (done === PLACEMENTS.length) {
+            if (errors.length === 0) {
+              setStatus('🎉 Готово! Шахматка привязана к карточкам лидов и сделок. Обновите Б24 (F5) и откройте любого лида.', 'ok');
+              try { BX24.installFinish(); } catch (e) {}
+            } else {
+              setStatus('Привязано: ' + ok + ' / ' + PLACEMENTS.length + '. Есть ошибки — см. список ниже.', 'error');
+              $retry.style.display = 'inline-block';
+            }
+          }
+        });
+      });
+    }
+
+    BX24.init(function () {
+      addLog('✅ BX24 инициализирован');
+      runBind();
+    });
+
+    // Если BX24.init не вызвался за 5с — даём кнопку повтора
+    setTimeout(() => {
+      if ($log.children.length === 0) {
+        setStatus('⚠️ BX24 не отвечает. Возможно страница открыта вне Б24.', 'error');
+        $retry.style.display = 'inline-block';
+      }
+    }, 5000);
+  </script>
+</body>
+</html>
