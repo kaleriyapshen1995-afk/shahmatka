@@ -559,9 +559,11 @@ async function saveEntry() {
       [F.product]    : productVal,
     };
 
+    let savedLeadId = null;
     if (editId) {
       // Редактирование существующего лида (клик на занятую ячейку)
       await apiOne('crm.lead.update', { id: parseInt(editId), fields });
+      savedLeadId = editId;
     } else if (currentLeadId) {
       // Обновляем ТЕКУЩИЙ лид (открыли шахматку из его карточки).
       // НЕ трогаем ответственного — он уже назначен.
@@ -570,13 +572,35 @@ async function saveEntry() {
       delete updateFields.ASSIGNED_BY_ID;  // не перезаписываем ответственного
       delete updateFields.TITLE;           // не перезаписываем название лида
       await apiOne('crm.lead.update', { id: parseInt(currentLeadId), fields: updateFields });
+      savedLeadId = currentLeadId;
     } else {
       // Создаём новый лид
-      await apiOne('crm.lead.add', { fields });
+      const newId = await apiOne('crm.lead.add', { fields });
+      savedLeadId = newId;
     }
 
     closeModal();
     await loadData(true);  // force=true — игнорируем кэш, чтобы свежая встреча сразу появилась
+
+    // Гарантированно подтягиваем только что сохранённый лид и добавляем в сетку.
+    // Это нужно потому что серверный фильтр Б24 по UF-дате может его не вернуть.
+    if (savedLeadId) {
+      try {
+        const lead = await apiOne('crm.lead.get', { id: parseInt(savedLeadId) });
+        if (lead) {
+          const mapped = mapLead(lead);
+          // Удаляем старую версию если была
+          allEntries = allEntries.filter(e => e.id !== String(savedLeadId));
+          // Добавляем свежую
+          allEntries.push(mapped);
+          renderGrid();
+          renderAnalytics();
+          log('✅ Лид #' + savedLeadId + ' добавлен в сетку напрямую');
+        }
+      } catch (e) {
+        log('⚠️ Не удалось подтянуть свежий лид #' + savedLeadId + ': ' + e.message);
+      }
+    }
   } catch (e) {
     alert('Ошибка сохранения: ' + e.message);
     log('❌ save: ' + e.message);
@@ -939,6 +963,21 @@ async function loadData(forceReloadUsers=false) {
     } else {
       allEntries = (await loadEntries(from, to, forceReloadUsers)) || [];
     }
+
+    // Если открыты из карточки лида/сделки и серверный фильтр его не вернул —
+    // подтянем его явно. Иначе встреча у этого лида не появится в сетке.
+    if (currentLeadId && !allEntries.some(e => e.id === currentLeadId)) {
+      try {
+        const lead = await apiOne('crm.lead.get', { id: parseInt(currentLeadId) });
+        if (lead && lead[F.date]) {
+          allEntries.push(mapLead(lead));
+          log('🎯 Текущий лид #' + currentLeadId + ' добавлен в сетку напрямую');
+        }
+      } catch (e) {
+        log('⚠️ Не удалось подтянуть текущий лид: ' + e.message);
+      }
+    }
+
     setStatus('Обновлено ' + new Date().toLocaleTimeString('ru-RU'));
   } catch (e) {
     setStatus('Ошибка: ' + e.message, 'error');
