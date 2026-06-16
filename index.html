@@ -559,11 +559,16 @@ async function saveEntry() {
     };
 
     if (editId) {
-      // Редактирование существующего лида
+      // Редактирование существующего лида (клик на занятую ячейку)
       await apiOne('crm.lead.update', { id: parseInt(editId), fields });
     } else if (currentLeadId) {
-      // Обновляем текущий лид (ТМ назначает встречу из карточки лида)
-      await apiOne('crm.lead.update', { id: parseInt(currentLeadId), fields });
+      // Обновляем ТЕКУЩИЙ лид (открыли шахматку из его карточки).
+      // НЕ трогаем ответственного — он уже назначен.
+      // Меняем только дату встречи, статус, ТМ и продукт.
+      const updateFields = { ...fields };
+      delete updateFields.ASSIGNED_BY_ID;  // не перезаписываем ответственного
+      delete updateFields.TITLE;           // не перезаписываем название лида
+      await apiOne('crm.lead.update', { id: parseInt(currentLeadId), fields: updateFields });
     } else {
       // Создаём новый лид
       await apiOne('crm.lead.add', { fields });
@@ -761,6 +766,7 @@ function renderAnalytics() {
 //  МОДАЛКА
 // ════════════════════════════════════════════════
 function openModal(id, mgrId, slot, date) {
+  log('🖱️ openModal: id=' + id + ', mgr=' + mgrId + ', slot=' + slot + ', date=' + date);
   editId = id; modalMgr = mgrId; modalSlot = slot; modalDate = date;
 
   document.getElementById('m-mgr').innerHTML = managers.map(m =>
