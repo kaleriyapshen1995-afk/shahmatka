@@ -273,6 +273,25 @@ let editId         = null, modalMgr, modalSlot, modalDate;
 const URL_PARAMS  = new URLSearchParams(window.location.search);
 let currentLeadId = URL_PARAMS.get('lead_id') || null;
 let currentDealId = URL_PARAMS.get('deal_id') || null;
+let currentDomain = URL_PARAMS.get('DOMAIN') || '';
+
+// Б24 передаёт PLACEMENT и PLACEMENT_OPTIONS через URL после нашего редиректа через Worker.
+// Парсим их и определяем лид/сделку — это работает даже когда BX24.js не отвечает.
+(function parsePlacementFromUrl() {
+  try {
+    const placement = URL_PARAMS.get('PLACEMENT') || '';
+    const optsRaw   = URL_PARAMS.get('PLACEMENT_OPTIONS') || '';
+    if (!placement || !optsRaw) return;
+    const opts = JSON.parse(optsRaw);
+    const id = opts.ID || opts.id || opts.ENTITY_ID || opts.entityId;
+    if (!id) return;
+    if (placement === 'CRM_LEAD_DETAIL_TAB' || placement === 'CRM_LEAD_LIST_MENU') {
+      currentLeadId = String(id);
+    } else if (placement === 'CRM_DEAL_DETAIL_TAB' || placement === 'CRM_DEAL_LIST_MENU') {
+      currentDealId = String(id);
+    }
+  } catch (e) { /* ignore */ }
+})();
 
 // ════════════════════════════════════════════════
 //  API — прямые вызовы вебхука Б24
@@ -672,7 +691,7 @@ function renderGrid() {
           const lbl  = e.client || tmName || e.status;
           const tip  = [e.client, tmName ? 'ТМ: '+tmName : ''].filter(Boolean).join(' | ');
           const isCurrent = e.id === currentLeadId;
-          html += `<td class="slot${isCurrent?' current-lead-slot':''}" onclick="openModal('${e.id}','${mgr.id}','${sl}','${ds}')"><span class="cell ${css}" title="${tip}">${lbl}</span></td>`;
+          html += `<td class="slot${isCurrent?' current-lead-slot':''}" onclick="openModal('${e.id}','${mgr.id}','${sl}','${ds}')" oncontextmenu="event.preventDefault(); openLeadCard('${e.id}'); return false;" title="ПКМ: открыть карточку лида"><span class="cell ${css}" title="${tip}">${lbl}</span></td>`;
         }
       });
     });
@@ -779,6 +798,16 @@ function openModal(id, mgrId, slot, date) {
     // Новый слот — если есть контекст лида, подставляем данные лида
     document.getElementById('m-source').value = currentLeadId ? 'tm' : 'tm';
     document.getElementById('m-client').value = '';
+    // Если открыто из карточки лида — подтянуть название лида в поле клиента
+    if (currentLeadId) {
+      apiOne('crm.lead.get', { id: parseInt(currentLeadId) })
+        .then(lead => {
+          if (lead && lead.TITLE && !document.getElementById('m-client').value) {
+            document.getElementById('m-client').value = lead.TITLE;
+          }
+        })
+        .catch(e => log('⚠️ crm.lead.get (modal): ' + e.message));
+    }
     document.getElementById('m-status').value = 'assigned';
   }
   toggleTM();
@@ -1092,6 +1121,25 @@ async function registerPlacements() {
   }
 }
 
+// Если открыты из карточки сделки — подтягиваем связанный с ней лид
+// через webhook (не BX24, который может не работать)
+async function autoLinkDealToLead() {
+  if (!currentDealId || currentLeadId) return;
+  try {
+    const deal = await apiOne('crm.deal.get', { id: currentDealId });
+    if (deal && deal.LEAD_ID) {
+      currentLeadId = String(deal.LEAD_ID);
+      log('📎 Лид сделки #' + currentDealId + ': #' + currentLeadId);
+      showLeadBanner();
+      renderGrid();
+    } else {
+      log('⚠️ У сделки #' + currentDealId + ' нет связанного лида');
+    }
+  } catch (e) {
+    log('⚠️ crm.deal.get: ' + e.message);
+  }
+}
+
 // ════════════════════════════════════════════════
 //  СТАРТ
 // ════════════════════════════════════════════════
@@ -1100,10 +1148,60 @@ document.getElementById('date-pick').value = dateKey(currentDate);
 function showLeadBanner() {
   const banner = document.getElementById('lead-banner');
   banner.style.display = 'block';
-  document.getElementById('lead-banner-title').textContent = 'Лид #' + currentLeadId;
+  const titleEl = document.getElementById('lead-banner-title');
+
+  // Сначала показываем просто номер, потом подгружаем название
+  titleEl.textContent = 'Лид #' + currentLeadId;
+
+  // Делаем кликабельным — открывает карточку лида в Б24
+  const domain = currentDomain || (location.hostname.endsWith('seller24.ru') ? location.hostname : 'crm.seller24.ru');
+  const leadUrl = 'https://' + domain + '/crm/lead/details/' + currentLeadId + '/';
+
+  banner.style.cursor = 'pointer';
+  banner.onclick = () => {
+    // Открываем в верхнем окне (выходим из iframe), либо в новой вкладке как fallback
+    try {
+      if (window.top && window.top !== window.self) {
+        window.top.location.href = leadUrl;
+      } else {
+        window.open(leadUrl, '_blank');
+      }
+    } catch (e) {
+      window.open(leadUrl, '_blank');
+    }
+  };
+
+  // Подтягиваем название лида
+  apiOne('crm.lead.get', { id: parseInt(currentLeadId) }).then(lead => {
+    if (lead && lead.TITLE) {
+      titleEl.innerHTML = '<u>Лид #' + currentLeadId + ' — ' + escapeHtml(lead.TITLE) + '</u> <small>(открыть карточку)</small>';
+    } else {
+      titleEl.innerHTML = '<u>Лид #' + currentLeadId + '</u> <small>(открыть карточку)</small>';
+    }
+  }).catch(e => log('⚠️ crm.lead.get: ' + e.message));
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// Открывает карточку лида в Б24 (используется при ПКМ на ячейке)
+function openLeadCard(leadId) {
+  const domain = currentDomain || (location.hostname.endsWith('seller24.ru') ? location.hostname : 'crm.seller24.ru');
+  const url = 'https://' + domain + '/crm/lead/details/' + leadId + '/';
+  try {
+    if (window.top && window.top !== window.self) {
+      window.top.location.href = url;
+    } else {
+      window.open(url, '_blank');
+    }
+  } catch (e) {
+    window.open(url, '_blank');
+  }
 }
 
 if (currentLeadId) showLeadBanner();
+if (currentDealId && !currentLeadId) autoLinkDealToLead();
 
 checkPlacements();
 loadData();
