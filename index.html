@@ -1006,67 +1006,90 @@ async function checkPlacements() {
   });
 }
 
-function registerPlacements() {
-  const btn = document.getElementById('btn-bind');
-  const statusEl = document.getElementById('placement-status');
+// Прямые REST вызовы к вебхуку (минуя BX24.js) — на случай если BX24 виснет.
+// ВАЖНО: у вебхука должно быть право "Встраивание приложений (placement)".
+const WEBHOOK_URL = 'https://crm.seller24.ru/rest/5/lugy1ou7q1i8h1zm';
 
-  const setBtn = (text, color) => {
-    if (btn) {
-      btn.textContent = text;
-      if (color) { btn.style.background = color; btn.style.borderColor = color; }
-    }
-  };
+function bindOne(placement) {
+  // Пробуем через BX24 с таймаутом 8 сек; если не отвечает — fallback на webhook
+  return new Promise(async resolve => {
+    let done = false;
+    const timer = setTimeout(async () => {
+      if (done) return;
+      done = true;
+      log('⏰ ' + placement + ': BX24 не отвечает 8с, пробую через webhook...');
+      try {
+        const url = WEBHOOK_URL + '/placement.bind.json?PLACEMENT=' + encodeURIComponent(placement)
+          + '&HANDLER=' + encodeURIComponent(HANDLER_URL)
+          + '&TITLE=' + encodeURIComponent('Шахматка');
+        const r = await fetch(url);
+        const j = await r.json();
+        if (j.error) {
+          log('❌ webhook ' + placement + ': ' + j.error + ' / ' + (j.error_description || ''));
+          resolve({ ok: false, placement, error: j.error_description || j.error });
+        } else {
+          log('✅ ' + placement + ' (через webhook)');
+          resolve({ ok: true, placement });
+        }
+      } catch (e) {
+        log('❌ webhook ' + placement + ': ' + e.message);
+        resolve({ ok: false, placement, error: e.message });
+      }
+    }, 8000);
 
-  setBtn('⏳ Проверяю BX24...');
-  log('🔧 registerPlacements: старт');
-
-  if (typeof BX24 === 'undefined') {
-    log('❌ BX24 не загружен (typeof === undefined)');
-    setBtn('❌ BX24 не загружен — открой через "Перейти к приложению"', '#c0392b');
-    return;
-  }
-
-  log('✅ BX24 доступен, привязываю ' + PLACEMENTS.length + ' placement...');
-  setBtn('⏳ Привязываю...');
-  if (statusEl) statusEl.textContent = 'Привязываем...';
-
-  let pending = PLACEMENTS.length;
-  let errors  = [];
-  let ok = 0;
-
-  PLACEMENTS.forEach(placement => {
     BX24.callMethod('placement.bind', {
-      PLACEMENT : placement,
-      HANDLER   : HANDLER_URL,
-      TITLE     : 'Шахматка',
-    }, function (result) {
-      pending--;
+      PLACEMENT: placement, HANDLER: HANDLER_URL, TITLE: 'Шахматка',
+    }, function(result) {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
       if (result.error()) {
         const err = result.error();
         if (err.ex && /already/i.test(err.ex.error_description || '')) {
           log('☑ ' + placement + ': уже привязан');
-          ok++;
+          resolve({ ok: true, placement });
         } else {
-          const msg = placement + ': ' + (err.ex ? err.ex.error_description : JSON.stringify(err));
-          errors.push(msg);
-          log('❌ ' + msg);
+          const msg = err.ex ? err.ex.error_description : JSON.stringify(err);
+          log('❌ ' + placement + ': ' + msg);
+          resolve({ ok: false, placement, error: msg });
         }
       } else {
-        log('✅ ' + placement + ': привязан');
-        ok++;
-      }
-      if (pending === 0) {
-        if (errors.length) {
-          setBtn('❌ Ошибка (' + errors.length + ')', '#c0392b');
-          if (statusEl) statusEl.textContent = 'Ошибка: ' + errors.join('; ');
-        } else {
-          setBtn('✅ Привязано! Обнови Б24 (F5)', '#3B6D11');
-          if (statusEl) statusEl.textContent = 'Готово! Обновите карточку лида/сделки.';
-          setTimeout(() => { document.getElementById('placement-banner').style.display = 'none'; }, 4000);
-        }
+        log('✅ ' + placement + ' (через BX24)');
+        resolve({ ok: true, placement });
       }
     });
   });
+}
+
+async function registerPlacements() {
+  const btn = document.getElementById('btn-bind');
+  const setBtn = (text, color) => {
+    if (btn) { btn.textContent = text; if (color) { btn.style.background = color; btn.style.borderColor = color; } }
+  };
+
+  log('🔧 registerPlacements: старт');
+  setBtn('⏳ Привязываю...');
+
+  if (typeof BX24 === 'undefined') {
+    log('⚠️ BX24 нет, использую только webhook');
+  }
+
+  const results = await Promise.all(PLACEMENTS.map(bindOne));
+  const ok      = results.filter(r => r.ok).length;
+  const errors  = results.filter(r => !r.ok);
+
+  if (errors.length === 0) {
+    setBtn('✅ Привязано! Обнови Б24 (F5)', '#3B6D11');
+    log('🎉 Все ' + ok + ' placement привязаны');
+  } else {
+    const insufficient = errors.some(e => /insufficient_scope|higher privileges/i.test(e.error || ''));
+    if (insufficient) {
+      setBtn('❌ Нет прав placement в вебхуке', '#c0392b');
+      log('❗ Webhook без права "Встраивание приложений (placement)" — добавьте в настройках вебхука');
+    } else {
+      setBtn('❌ Ошибка (' + errors.length + ') — см. лог внизу', '#c0392b');
+    }
+  }
 }
 
 // ════════════════════════════════════════════════
