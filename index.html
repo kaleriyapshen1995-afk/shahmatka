@@ -553,6 +553,7 @@ async function saveEntry() {
       TITLE          : client || (source === 'own' ? 'Своя встреча' : 'Встреча от ТМ'),
       ASSIGNED_BY_ID : parseInt(mgrId),
       [F.date]       : dtVal ? dtVal + ':00' : '',
+      'UF_CRM_1750841189' : dtVal ? dtVal + ':00' : '',  // дублирующее поле "Дата и время встречи"
       [F.tm]         : source === 'tm' ? (parseInt(tmId) || null) : null,
       [F.status]     : statusVal,
       [F.product]    : productVal,
@@ -575,7 +576,7 @@ async function saveEntry() {
     }
 
     closeModal();
-    await loadData();
+    await loadData(true);  // force=true — игнорируем кэш, чтобы свежая встреча сразу появилась
   } catch (e) {
     alert('Ошибка сохранения: ' + e.message);
     log('❌ save: ' + e.message);
@@ -588,7 +589,7 @@ async function deleteEntry() {
   if (!confirm('Удалить встречу (лид)?')) return;
   try {
     await apiOne('crm.lead.delete', { id: parseInt(editId) });
-    closeModal(); await loadData();
+    closeModal(); await loadData(true);
   } catch (e) { alert('Ошибка: ' + e.message); }
 }
 
