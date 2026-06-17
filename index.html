@@ -233,7 +233,7 @@ td.slot.current-lead-slot{background:#EBF5FF}
 // Вебхук Б24 — прямой вызов, без прокси
 const WEBHOOK = 'https://crm.seller24.ru/rest/5/9yr3u419ap9cvzn7/';
 const F = {
-  date    : 'UF_CRM_1779825187',   // дата/время встречи
+  date    : 'UF_CRM_1750841189',   // дата/время встречи (основное поле в системе)
   status  : 'UF_CRM_1779825277',   // статус встречи
   tm      : 'UF_CRM_1675251074',   // телемаркетолог
   manager : 'ASSIGNED_BY_ID',      // ответственный менеджер ОП
@@ -553,7 +553,6 @@ async function saveEntry() {
       TITLE          : client || (source === 'own' ? 'Своя встреча' : 'Встреча от ТМ'),
       ASSIGNED_BY_ID : parseInt(mgrId),
       [F.date]       : dtVal ? dtVal + ':00' : '',
-      'UF_CRM_1750841189' : dtVal ? dtVal + ':00' : '',  // дублирующее поле "Дата и время встречи"
       [F.tm]         : source === 'tm' ? (parseInt(tmId) || null) : null,
       [F.status]     : statusVal,
       [F.product]    : productVal,
