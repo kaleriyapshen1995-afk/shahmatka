@@ -965,28 +965,54 @@ async function loadData(forceReloadUsers=false) {
 
     // Если открыты из карточки лида/сделки и серверный фильтр его не вернул —
     // подтянем его явно. Иначе встреча у этого лида не появится в сетке.
-    if (currentLeadId && !allEntries.some(e => e.id === currentLeadId)) {
+    if (currentLeadId) {
       try {
         const lead = await apiOne('crm.lead.get', { id: parseInt(currentLeadId) });
-        if (lead && lead[F.date]) {
-          allEntries.push(mapLead(lead));
-          log('🎯 Лид #' + currentLeadId + ' добавлен напрямую (дата: ' + lead[F.date] + ')');
+        if (!lead) {
+          log('❌ Лид #' + currentLeadId + ' не найден');
+        } else {
+          log('📋 Лид #' + currentLeadId + ' получен. ' + F.date + ' = ' + (lead[F.date] || 'ПУСТО'));
+          log('   менеджер ASSIGNED_BY_ID = ' + lead.ASSIGNED_BY_ID + ', статус = ' + JSON.stringify(lead[F.status]) + ', продукт = ' + lead[F.product]);
 
-          // Автоматически переключаем шахматку на день этой встречи —
-          // иначе пользователь не увидит её в сетке.
-          const leadDate = String(lead[F.date]).slice(0, 10);
-          const todayKey = dateKey(currentDate);
-          if (leadDate !== todayKey) {
-            const [y, m, d] = leadDate.split('-').map(Number);
-            currentDate = new Date(y, m - 1, d);
-            document.getElementById('date-pick').value = leadDate;
-            log('📅 Дата шахматки переключена на ' + leadDate + ' (день встречи лида)');
+          if (!lead[F.date]) {
+            log('⚠️ В лиде поле ' + F.date + ' пустое — встреча не назначена');
+          } else {
+            const mapped = mapLead(lead);
+            log('   → mapped: date=' + mapped.date + ', slot=' + mapped.slot + ', mgr=' + mapped.mgr + ', product=' + mapped.product + ', status=' + mapped.status);
+
+            // Проверяем что менеджер есть в списке managers
+            const mgrInList = managers.find(m => m.id === mapped.mgr);
+            if (!mgrInList) {
+              log('⚠️ Менеджер #' + mapped.mgr + ' НЕ в отделе ОП (id 17). Лид не покажется в сетке!');
+              log('   Список ID менеджеров ОП: ' + managers.map(m => m.id).join(', '));
+            } else {
+              log('✅ Менеджер: ' + mgrInList.name);
+            }
+
+            // Добавляем в allEntries (или обновляем существующий)
+            allEntries = allEntries.filter(e => e.id !== currentLeadId);
+            allEntries.push(mapped);
+            log('🎯 Лид добавлен в сетку. Всего entries: ' + allEntries.length);
+
+            // Автоматически переключаем шахматку на день этой встречи
+            const todayKey = dateKey(currentDate);
+            if (mapped.date !== todayKey) {
+              const [y, m, d] = mapped.date.split('-').map(Number);
+              currentDate = new Date(y, m - 1, d);
+              document.getElementById('date-pick').value = mapped.date;
+              log('📅 Дата шахматки переключена на ' + mapped.date);
+            }
+
+            // Проверяем что продукт совпадает с выбранным
+            if (mapped.product !== currentProduct) {
+              log('⚠️ Продукт лида (' + mapped.product + ') ≠ выбранный (' + currentProduct + '). Переключаюсь на продукт лида.');
+              currentProduct = mapped.product;
+              document.querySelectorAll('.tab-product').forEach(b => b.classList.toggle('active', b.dataset.product === currentProduct));
+            }
           }
-        } else if (lead) {
-          log('⚠️ У лида #' + currentLeadId + ' пустое поле даты ' + F.date);
         }
       } catch (e) {
-        log('⚠️ Не удалось подтянуть текущий лид: ' + e.message);
+        log('⚠️ Ошибка получения лида: ' + e.message);
       }
     }
 
