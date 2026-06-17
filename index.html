@@ -983,8 +983,22 @@ async function loadData(forceReloadUsers=false) {
             // Проверяем что менеджер есть в списке managers
             const mgrInList = managers.find(m => m.id === mapped.mgr);
             if (!mgrInList) {
-              log('⚠️ Менеджер #' + mapped.mgr + ' НЕ в отделе ОП (id 17). Лид не покажется в сетке!');
-              log('   Список ID менеджеров ОП: ' + managers.map(m => m.id).join(', '));
+              log('⚠️ Менеджер #' + mapped.mgr + ' НЕ в отделе ОП. Добавлю его в сетку временно.');
+              // Подгружаем данные пользователя и добавляем в managers
+              try {
+                const u = await apiOne('user.get', { ID: mapped.mgr });
+                const userName = u ? (u.NAME + ' ' + u.LAST_NAME).trim() : ('Менеджер #' + mapped.mgr);
+                managers.push({ id: mapped.mgr, name: userName + ' (вне отдела ОП)' });
+                // Обновляем выпадающий список
+                const sel = document.getElementById('mgr-filter');
+                if (sel) {
+                  sel.innerHTML = '<option value="">Все менеджеры</option>' +
+                    managers.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
+                }
+                log('✅ Добавлен: ' + userName);
+              } catch (e) {
+                managers.push({ id: mapped.mgr, name: 'Менеджер #' + mapped.mgr });
+              }
             } else {
               log('✅ Менеджер: ' + mgrInList.name);
             }
