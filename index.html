@@ -970,7 +970,20 @@ async function loadData(forceReloadUsers=false) {
         const lead = await apiOne('crm.lead.get', { id: parseInt(currentLeadId) });
         if (lead && lead[F.date]) {
           allEntries.push(mapLead(lead));
-          log('🎯 Текущий лид #' + currentLeadId + ' добавлен в сетку напрямую');
+          log('🎯 Лид #' + currentLeadId + ' добавлен напрямую (дата: ' + lead[F.date] + ')');
+
+          // Автоматически переключаем шахматку на день этой встречи —
+          // иначе пользователь не увидит её в сетке.
+          const leadDate = String(lead[F.date]).slice(0, 10);
+          const todayKey = dateKey(currentDate);
+          if (leadDate !== todayKey) {
+            const [y, m, d] = leadDate.split('-').map(Number);
+            currentDate = new Date(y, m - 1, d);
+            document.getElementById('date-pick').value = leadDate;
+            log('📅 Дата шахматки переключена на ' + leadDate + ' (день встречи лида)');
+          }
+        } else if (lead) {
+          log('⚠️ У лида #' + currentLeadId + ' пустое поле даты ' + F.date);
         }
       } catch (e) {
         log('⚠️ Не удалось подтянуть текущий лид: ' + e.message);
