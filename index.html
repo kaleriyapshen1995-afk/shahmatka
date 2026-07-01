@@ -133,6 +133,10 @@ td.slot.current-lead-slot{background:#EBF5FF}
     <option value="">Все менеджеры</option>
   </select>
 
+  <select id="segment-filter" onchange="onSegmentFilterChange()" style="font-size:12px;padding:5px 8px;border:1px solid #ddd;border-radius:6px;height:30px;max-width:200px">
+    <option value="">Все сегменты</option>
+  </select>
+
   <button class="btn-refresh" onclick="loadData(true)">↻ Обновить</button>
   <button class="btn-refresh" id="btn-bind" onclick="registerPlacements()" style="background:#185FA5;color:#fff;border-color:#185FA5">📎 Привязать к лидам/сделкам</button>
   <span class="status-bar" id="status">Инициализация...</span>
@@ -190,6 +194,12 @@ td.slot.current-lead-slot{background:#EBF5FF}
         <option value="platform">Платформа</option>
       </select>
     </div>
+    <div class="field">
+      <label>Сегментация селлера</label>
+      <select id="m-segment" onchange="onSegmentChange()">
+        <option value="">— не указана —</option>
+      </select>
+    </div>
     <div class="field"><label>Менеджер ОП</label><select id="m-mgr"></select></div>
     <div class="field"><label>Дата и время</label><input type="datetime-local" id="m-datetime"></div>
     <div class="field">
@@ -239,6 +249,21 @@ const F = {
   manager : 'ASSIGNED_BY_ID',      // ответственный менеджер ОП
   client  : 'TITLE',               // название лида/сделки
   product : 'UF_CRM_642D1C1B1609C', // продукт (держать)
+  segment : 'UF_CRM_1730551844',   // сегментация селлера (список, значения вида "A - 50 млн. и более")
+};
+
+// Названия отделов Б24, в которые нужно попадать в зависимости от сегмента.
+// Ключ — буква сегмента (парсится из текста значения поля, см. loadSegmentField()).
+// Если несколько букв ведут в один и тот же отдел (E,F,G,H → "менее 3 млн"),
+// просто укажите им одинаковое имя отдела.
+const SEGMENT_DEPT_NAME = {
+  A: 'Лиды от ТМ (сегмент > 50 000 000 р.)',
+  C: 'Лиды от ТМ (сегмент > 6 000 000 р.)',
+  D: 'Лиды от ТМ (сегмент > 3 000 000 р.)',
+  E: 'Лиды от ТМ (сегмент менее 3 000 000 р.)',
+  F: 'Лиды от ТМ (сегмент менее 3 000 000 р.)',
+  G: 'Лиды от ТМ (сегмент менее 3 000 000 р.)',
+  H: 'Лиды от ТМ (сегмент менее 3 000 000 р.)',
 };
 
 const STATUS_IDS = {
@@ -268,6 +293,13 @@ let allEntries     = [];
 let managers       = [];
 let tms            = [];
 let editId         = null, modalMgr, modalSlot, modalDate;
+
+// ── Сегментация селлера ──
+let segmentFieldItems = [];   // [{id, letter, label}] — расшифровка списка UF_CRM_1730551844
+let segmentIdToLetter = {};   // id значения поля → буква (A/C/D/E/F/G/H)
+let segmentDeptIds    = {};   // буква сегмента → ID отдела в Б24
+let segmentManagers   = {};   // буква сегмента → [{id,name}] менеджеры этого отдела
+let activeSegmentId   = '';   // текущий выбранный сегмент в тулбаре (фильтр по всей сетке)
 
 // Контекст — из URL-параметров (передаётся при открытии из карточки лида/сделки)
 const URL_PARAMS  = new URLSearchParams(window.location.search);
@@ -419,11 +451,141 @@ async function loadUsers(force = false) {
 }
 
 // ════════════════════════════════════════════════
+//  СЕГМЕНТАЦИЯ СЕЛЛЕРА (UF_CRM_1730551844)
+// ════════════════════════════════════════════════
+
+// Расшифровываем список значений поля (crm.lead.fields) и вытаскиваем букву
+// сегмента из текста, например "A - 50 млн. и более" → 'A'.
+async function loadSegmentField(force = false) {
+  try {
+    const cached = !force && cacheGet('sh_segment_field', 6 * 60 * 60 * 1000);
+    if (cached) {
+      segmentFieldItems = cached.items;
+      segmentIdToLetter = cached.idToLetter;
+      log('🏷️ Сегменты (кэш): ' + segmentFieldItems.map(i => i.letter).join(', '));
+      fillSegmentFilterSelect();
+      return;
+    }
+
+    const fields = await apiOne('crm.lead.fields', {});
+    const fieldDef = fields && fields[F.segment];
+    if (!fieldDef || !Array.isArray(fieldDef.items)) {
+      log('⚠️ Поле ' + F.segment + ' не найдено или не является списком (crm.lead.fields). ' +
+          'Проверьте код поля и его тип (должен быть "Список").');
+      segmentFieldItems = []; segmentIdToLetter = {};
+      return;
+    }
+
+    segmentFieldItems = fieldDef.items.map(it => {
+      const value = String(it.VALUE || '');
+      const m = value.match(/^\s*([A-Za-zА-Яа-я])\s*[-—]/); // "A - 50 млн..." → "A"
+      return { id: String(it.ID), letter: m ? m[1].toUpperCase() : null, label: value };
+    });
+    segmentIdToLetter = {};
+    segmentFieldItems.forEach(it => { if (it.letter) segmentIdToLetter[it.id] = it.letter; });
+
+    cacheSet('sh_segment_field', { items: segmentFieldItems, idToLetter: segmentIdToLetter });
+    log('🏷️ Сегменты найдены: ' + segmentFieldItems.map(i => `${i.letter || '?'}(id${i.id})`).join(', '));
+    fillSegmentFilterSelect();
+
+    const unmatched = segmentFieldItems.filter(i => !i.letter);
+    if (unmatched.length) {
+      log('⚠️ Не удалось распознать букву сегмента в: ' + unmatched.map(i => i.label).join(' | ') +
+          ' — проверьте формат текста в списке Б24 (ожидается "X - ...").');
+    }
+  } catch (e) {
+    log('⚠️ loadSegmentField: ' + e.message);
+    segmentFieldItems = []; segmentIdToLetter = {};
+  }
+}
+
+// Находим ID отделов по названию (department.get) и грузим их сотрудников.
+async function loadSegmentDepartments(force = false) {
+  try {
+    const cached = !force && cacheGet('sh_segment_depts', 6 * 60 * 60 * 1000);
+    if (cached) {
+      segmentDeptIds  = cached.deptIds;
+      segmentManagers = cached.managers;
+      log('🏢 Отделы сегментов (кэш): ' + Object.keys(segmentDeptIds).map(k => k + '=' + segmentDeptIds[k]).join(', '));
+      return;
+    }
+
+    const allDepts = await apiAll('department.get', {});
+    log('🏢 Всего отделов в Б24: ' + allDepts.length);
+
+    // Уникальные названия отделов, которые нам нужны
+    const neededNames = [...new Set(Object.values(SEGMENT_DEPT_NAME))];
+    const nameToId = {};
+    neededNames.forEach(name => {
+      const dep = allDepts.find(d => String(d.NAME || '').trim() === name.trim());
+      if (dep) nameToId[name] = String(dep.ID);
+      else log('⚠️ Отдел "' + name + '" не найден в Б24 — проверьте точное название в SEGMENT_DEPT_NAME.');
+    });
+
+    segmentDeptIds = {};
+    Object.keys(SEGMENT_DEPT_NAME).forEach(letter => {
+      const id = nameToId[SEGMENT_DEPT_NAME[letter]];
+      if (id) segmentDeptIds[letter] = id;
+    });
+
+    // Загружаем сотрудников для каждого уникального отдела (один запрос на отдел)
+    const uniqueDeptIds = [...new Set(Object.values(segmentDeptIds))];
+    const usersByDept = {};
+    await Promise.all(uniqueDeptIds.map(async deptId => {
+      try {
+        const list = await apiAll('user.get', { filter: { ACTIVE: true, UF_DEPARTMENT: parseInt(deptId) }, select: ['ID','NAME','LAST_NAME'] });
+        usersByDept[deptId] = list.map(u => ({ id: String(u.ID), name: (u.NAME + ' ' + u.LAST_NAME).trim() }));
+      } catch (e) {
+        log('⚠️ user.get для отдела ' + deptId + ': ' + e.message);
+        usersByDept[deptId] = [];
+      }
+    }));
+
+    segmentManagers = {};
+    Object.keys(segmentDeptIds).forEach(letter => {
+      segmentManagers[letter] = usersByDept[segmentDeptIds[letter]] || [];
+    });
+
+    cacheSet('sh_segment_depts', { deptIds: segmentDeptIds, managers: segmentManagers });
+    log('🏢 Отделы сегментов: ' + Object.keys(segmentDeptIds).map(k => k + '=' + segmentDeptIds[k] + ' (' + (segmentManagers[k]||[]).length + ' чел.)').join(', '));
+  } catch (e) {
+    log('⚠️ loadSegmentDepartments: ' + e.message);
+    segmentDeptIds = {}; segmentManagers = {};
+  }
+}
+
+// Список менеджеров для выбранного значения сегмента (по ID значения поля).
+// Если сегмент не выбран/не распознан — возвращаем null (значит "не фильтровать", показываем всех).
+function managersForSegmentValue(segId) {
+  if (!segId) return null;
+  const letter = segmentIdToLetter[String(segId)];
+  if (!letter) return null;
+  const list = segmentManagers[letter];
+  return (list && list.length) ? list : null;
+}
+
+function fillSegmentFilterSelect() {
+  const sel = document.getElementById('segment-filter');
+  if (!sel) return;
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">Все сегменты</option>' +
+    segmentFieldItems.map(i => `<option value="${i.id}"${i.id===cur?' selected':''}>${i.label}</option>`).join('');
+}
+
+// Тулбарный фильтр сегмента — ограничивает сетку менеджерами нужного отдела,
+// независимо от того, открыта ли шахматка из карточки лида.
+function onSegmentFilterChange() {
+  activeSegmentId = document.getElementById('segment-filter').value;
+  renderGrid();
+  renderAnalytics();
+}
+
+// ════════════════════════════════════════════════
 //  ЛИДЫ → ВСТРЕЧИ
 // ════════════════════════════════════════════════
 async function loadEntries(from, to, force = false) {
   try {
-    const SELECT = ['ID','TITLE','STATUS_ID','ASSIGNED_BY_ID', F.date, F.status, F.tm, F.product];
+    const SELECT = ['ID','TITLE','STATUS_ID','ASSIGNED_BY_ID', F.date, F.status, F.tm, F.product, F.segment];
     const ORDER  = { [F.date]: 'ASC' };
     const cacheKey = 'sh_leads_' + from + '_' + to;
 
@@ -520,9 +682,10 @@ function mapLead(item) {
   return {
     id: String(item.ID), mgr: mgrId,
     date, slot, source, product,
-    tm    : String(item[F.tm] || ''),
-    client: String(item.TITLE || ''),
-    status: statusKey,
+    tm     : String(item[F.tm] || ''),
+    client : String(item.TITLE || ''),
+    status : statusKey,
+    segment: String(item[F.segment] || ''), // ID значения списка UF_CRM_1730551844
   };
 }
 
@@ -540,6 +703,7 @@ async function saveEntry() {
     const client  = document.getElementById('m-client').value;
     const skey    = document.getElementById('m-status').value;
     const product = document.getElementById('m-product').value;
+    const segVal  = document.getElementById('m-segment').value;
 
     const productVal = PRODUCT_IDS[product] || '';
 
@@ -556,20 +720,20 @@ async function saveEntry() {
       [F.tm]         : source === 'tm' ? (parseInt(tmId) || null) : null,
       [F.status]     : statusVal,
       [F.product]    : productVal,
+      [F.segment]    : segVal || null,
     };
 
     let savedLeadId = null;
     if (editId) {
-      // Редактирование существующего лида (клик на занятую ячейку)
+      // Редактирование существующей встречи (клик на занятую ячейку) — меняем всё
       await apiOne('crm.lead.update', { id: parseInt(editId), fields });
       savedLeadId = editId;
     } else if (currentLeadId) {
-      // Обновляем ТЕКУЩИЙ лид (открыли шахматку из его карточки).
-      // НЕ трогаем ответственного — он уже назначен.
-      // Меняем только дату встречи, статус, ТМ и продукт.
+      // Назначение встречи из карточки лида.
+      // Лид переходит к выбранному менеджеру ОП (ASSIGNED_BY_ID меняется на mgrId).
+      // Название лида (TITLE) не трогаем — оно уже есть у лида.
       const updateFields = { ...fields };
-      delete updateFields.ASSIGNED_BY_ID;  // не перезаписываем ответственного
-      delete updateFields.TITLE;           // не перезаписываем название лида
+      delete updateFields.TITLE;
       await apiOne('crm.lead.update', { id: parseInt(currentLeadId), fields: updateFields });
       savedLeadId = currentLeadId;
     } else {
@@ -657,23 +821,30 @@ function getDates() {
   return [new Date(currentDate)];
 }
 
-function getEntries() {
-  const sel = document.getElementById('mgr-filter');
-  const mgrVal = sel ? sel.value : '';
-  return allEntries.filter(e =>
-    e.product === currentProduct &&
-    (mgrVal === '' || e.mgr === mgrVal)
-  );
-}
-
 function uname(id, list) {
   const u = list.find(m => m.id === String(id));
   return u ? u.name : (id ? 'ID ' + id : '—');
 }
 
+// Список менеджеров с учётом фильтра "мгр-фильтр" + фильтра по сегменту (тулбар).
+// Используется и в сетке, и в аналитике, чтобы они не расходились.
+function getFilteredManagers() {
+  const sel    = document.getElementById('mgr-filter');
+  const mgrVal = sel ? sel.value : '';
+  let list = mgrVal ? managers.filter(m => m.id === mgrVal) : managers;
+
+  if (activeSegmentId) {
+    const segList = managersForSegmentValue(activeSegmentId);
+    if (segList) {
+      const ids = new Set(segList.map(m => m.id));
+      list = list.filter(m => ids.has(m.id));
+    }
+  }
+  return list;
+}
+
 function renderGrid() {
-  const dates   = getDates();
-  const entries = getEntries();
+  const dates = getDates();
   document.getElementById('grid-loader').style.display = 'none';
   const tbl  = document.getElementById('grid');
   const wrap = document.querySelector('.grid-wrap');
@@ -685,10 +856,8 @@ function renderGrid() {
   wrap.style.display = '';
   tbl.style.display = '';
 
-  // Менеджеры с учётом фильтра
-  const sel    = document.getElementById('mgr-filter');
-  const mgrVal = sel ? sel.value : '';
-  const mgrList = mgrVal ? managers.filter(m => m.id === mgrVal) : managers;
+  // Менеджеры с учётом фильтра по менеджеру и по сегменту
+  const mgrList = getFilteredManagers();
 
   let html = '<thead><tr><th class="mgr-h">Менеджер ОП</th>';
   if (period === 'day') {
@@ -711,8 +880,6 @@ function renderGrid() {
           x.product === currentProduct
         );
         if (!e) {
-          // Подсветить слот если это текущий лид и слот свободен
-          const isCurrentSlot = currentLeadId && !e;
           html += `<td class="slot empty" onclick="openModal(null,'${mgr.id}','${sl}','${ds}')"></td>`;
         } else {
           const css  = CSS[e.source === 'own' ? 'own' : e.status] || 's-assigned';
@@ -741,9 +908,7 @@ function crCell(val) {
 
 function renderAnalytics() {
   const ds      = getDates().map(dateKey);
-  const mgrSel  = document.getElementById('mgr-filter');
-  const mgrVal  = mgrSel ? mgrSel.value : '';
-  const mgrList = mgrVal ? managers.filter(m => m.id === mgrVal) : managers;
+  const mgrList = getFilteredManagers();
   const entries = allEntries.filter(e => e.product === currentProduct && ds.includes(e.date));
 
   let html = '';
@@ -789,16 +954,43 @@ function renderAnalytics() {
 // ════════════════════════════════════════════════
 //  МОДАЛКА
 // ════════════════════════════════════════════════
+// Строит <option> для менеджеров. Если у уже назначенного менеджера selectedId
+// нет в отфильтрованном по сегменту списке — всё равно добавляем его отдельной
+// пометкой, чтобы смена сегмента не "съедала" существующее назначение молча.
+function buildMgrOptions(list, selectedId) {
+  const base = list.slice();
+  if (selectedId && !base.find(m => m.id === String(selectedId))) {
+    const known = managers.find(m => m.id === String(selectedId));
+    base.push({ id: String(selectedId), name: (known ? known.name : ('ID ' + selectedId)) + ' ⚠️ вне сегмента' });
+  }
+  return base.map(m =>
+    `<option value="${m.id}"${m.id === String(selectedId) ? ' selected' : ''}>${m.name}</option>`
+  ).join('');
+}
+
+// Меняем список менеджеров ОП при выборе/смене сегмента в модалке.
+// Текущий выбранный менеджер сохраняется (см. buildMgrOptions).
+function onSegmentChange() {
+  const segVal   = document.getElementById('m-segment').value;
+  const filtered = managersForSegmentValue(segVal);
+  const mgrSel   = document.getElementById('m-mgr');
+  const keep     = mgrSel.value;
+  mgrSel.innerHTML = buildMgrOptions(filtered || managers, keep);
+  if (!filtered && segVal) {
+    log('⚠️ Для сегмента "' + (segmentFieldItems.find(i=>i.id===segVal)||{}).label + '" не найден отдел/менеджеры — показаны все менеджеры.');
+  }
+}
+
 function openModal(id, mgrId, slot, date) {
   log('🖱️ openModal: id=' + id + ', mgr=' + mgrId + ', slot=' + slot + ', date=' + date);
   editId = id; modalMgr = mgrId; modalSlot = slot; modalDate = date;
 
-  document.getElementById('m-mgr').innerHTML = managers.map(m =>
-    `<option value="${m.id}"${m.id === String(mgrId) ? ' selected' : ''}>${m.name}</option>`
-  ).join('');
+  document.getElementById('m-mgr').innerHTML = buildMgrOptions(managers, mgrId);
   document.getElementById('m-tm').innerHTML = tms.map(t =>
     `<option value="${t.id}">${t.name}</option>`
   ).join('');
+  document.getElementById('m-segment').innerHTML = '<option value="">— не указана —</option>' +
+    segmentFieldItems.map(i => `<option value="${i.id}">${i.label}</option>`).join('');
 
   document.getElementById('m-datetime').value = date + 'T' + slot.slice(0, 5);
   document.getElementById('m-product').value  = currentProduct;
@@ -823,22 +1015,31 @@ function openModal(id, mgrId, slot, date) {
       document.getElementById('m-status').value  = e.status || 'assigned';
       document.getElementById('m-product').value = e.product || 'accounting';
       if (e.tm) document.getElementById('m-tm').value = e.tm;
+      document.getElementById('m-segment').value = e.segment || '';
     }
+    onSegmentChange();
   } else {
     // Новый слот — если есть контекст лида, подставляем данные лида
     document.getElementById('m-source').value = currentLeadId ? 'tm' : 'tm';
     document.getElementById('m-client').value = '';
-    // Если открыто из карточки лида — подтянуть название лида в поле клиента
+    document.getElementById('m-segment').value = '';
+    // Если открыто из карточки лида — подтянуть название и сегментацию лида
     if (currentLeadId) {
       apiOne('crm.lead.get', { id: parseInt(currentLeadId) })
         .then(lead => {
           if (lead && lead.TITLE && !document.getElementById('m-client').value) {
             document.getElementById('m-client').value = lead.TITLE;
           }
+          if (lead && lead[F.segment]) {
+            document.getElementById('m-segment').value = String(lead[F.segment]);
+            onSegmentChange();
+            log('🏷️ Сегмент лида #' + currentLeadId + ' подтянут автоматически');
+          }
         })
         .catch(e => log('⚠️ crm.lead.get (modal): ' + e.message));
     }
     document.getElementById('m-status').value = 'assigned';
+    onSegmentChange();
   }
   toggleTM();
   document.getElementById('modal-bg').classList.add('open');
@@ -986,18 +1187,22 @@ async function loadData(forceReloadUsers=false) {
               log('⚠️ Менеджер #' + mapped.mgr + ' НЕ в отделе ОП. Добавлю его в сетку временно.');
               // Подгружаем данные пользователя и добавляем в managers
               try {
-                const u = await apiOne('user.get', { ID: mapped.mgr });
-                const userName = u ? (u.NAME + ' ' + u.LAST_NAME).trim() : ('Менеджер #' + mapped.mgr);
-                managers.push({ id: mapped.mgr, name: userName + ' (вне отдела ОП)' });
+                // user.get с FILTER возвращает массив — берём первый элемент
+                const result = await apiAll('user.get', { FILTER: { ID: mapped.mgr } });
+                const u = (Array.isArray(result) && result.length) ? result[0] : null;
+                const userName = u ? ((u.NAME || '') + ' ' + (u.LAST_NAME || '')).trim() : '';
+                const displayName = userName || ('Пользователь #' + mapped.mgr);
+                managers.push({ id: mapped.mgr, name: displayName + ' (вне отдела ОП)' });
                 // Обновляем выпадающий список
                 const sel = document.getElementById('mgr-filter');
                 if (sel) {
                   sel.innerHTML = '<option value="">Все менеджеры</option>' +
                     managers.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
                 }
-                log('✅ Добавлен: ' + userName);
+                log('✅ Добавлен: ' + displayName);
               } catch (e) {
-                managers.push({ id: mapped.mgr, name: 'Менеджер #' + mapped.mgr });
+                log('⚠️ user.get для #' + mapped.mgr + ': ' + e.message);
+                managers.push({ id: mapped.mgr, name: 'Пользователь #' + mapped.mgr + ' (вне отдела ОП)' });
               }
             } else {
               log('✅ Менеджер: ' + mgrInList.name);
@@ -1023,6 +1228,15 @@ async function loadData(forceReloadUsers=false) {
               currentProduct = mapped.product;
               document.querySelectorAll('.tab-product').forEach(b => b.classList.toggle('active', b.dataset.product === currentProduct));
             }
+
+            // Если у лида заполнена сегментация — включаем соответствующий фильтр
+            // сетки, чтобы показать слоты только нужного отдела.
+            if (mapped.segment) {
+              activeSegmentId = mapped.segment;
+              const segSel = document.getElementById('segment-filter');
+              if (segSel) segSel.value = mapped.segment;
+              log('🏷️ Сегмент лида: ' + (segmentIdToLetter[mapped.segment] || mapped.segment) + ' — фильтрую сетку по отделу');
+            }
           }
         }
       } catch (e) {
@@ -1047,6 +1261,12 @@ async function loadData(forceReloadUsers=false) {
 function clearLead() {
   currentLeadId = null;
   document.getElementById('lead-banner').style.display = 'none';
+  // Сбрасываем фильтр по сегменту, который мог быть выставлен автоматически из лида
+  activeSegmentId = '';
+  const segSel = document.getElementById('segment-filter');
+  if (segSel) segSel.value = '';
+  renderGrid();
+  renderAnalytics();
 }
 
 // ════════════════════════════════════════════════
@@ -1302,6 +1522,12 @@ if (currentLeadId) showLeadBanner();
 if (currentDealId && !currentLeadId) autoLinkDealToLead();
 
 checkPlacements();
+Promise.all([loadSegmentField(), loadSegmentDepartments()]).then(() => {
+  // Данные о сегментах/отделах могли подгрузиться уже после первого рендера сетки —
+  // перерисовываем, чтобы фильтр по сегменту (если он выставлен) применился.
+  renderGrid();
+  renderAnalytics();
+});
 loadData();
 </script>
 </body>
