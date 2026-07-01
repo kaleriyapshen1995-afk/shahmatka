@@ -252,19 +252,30 @@ const F = {
   segment : 'UF_CRM_1730551844',   // сегментация селлера (список, значения вида "A - 50 млн. и более")
 };
 
-// Названия отделов Б24, в которые нужно попадать в зависимости от сегмента.
-// Ключ — буква сегмента (парсится из текста значения поля, см. loadSegmentField()).
-// Если несколько букв ведут в один и тот же отдел (E,F,G,H → "менее 3 млн"),
-// просто укажите им одинаковое имя отдела.
-const SEGMENT_DEPT_NAME = {
-  A: 'Лиды от ТМ (сегмент > 50 000 000 р.)',
-  C: 'Лиды от ТМ (сегмент > 6 000 000 р.)',
-  D: 'Лиды от ТМ (сегмент > 3 000 000 р.)',
-  E: 'Лиды от ТМ (сегмент менее 3 000 000 р.)',
-  F: 'Лиды от ТМ (сегмент менее 3 000 000 р.)',
-  G: 'Лиды от ТМ (сегмент менее 3 000 000 р.)',
-  H: 'Лиды от ТМ (сегмент менее 3 000 000 р.)',
-};
+// Пороги сегментов (буква → сравнение и сумма в рублях), по которым ищем
+// нужный отдел в Б24 — сопоставляем не по точному тексту названия (он может
+// чуть отличаться пробелами/пунктуацией), а по числу и знаку "более/менее"
+// внутри названия отдела. Это устойчивее к мелким расхождениям в тексте.
+const SEGMENT_THRESHOLDS = [
+  { letters: ['A'],               cmp: '>', amount: 50000000 },
+  { letters: ['B'],               cmp: '>', amount: 10000000 },
+  { letters: ['C'],               cmp: '>', amount: 6000000  },
+  { letters: ['D'],               cmp: '>', amount: 3000000  },
+  { letters: ['E','F','G','H'],   cmp: '<', amount: 3000000  },
+];
+
+// Достаём из названия отдела число (склеивая группы цифр) и знак сравнения.
+// "Лиды от ТМ (сегмент > 50 000 000 р.)" → {cmp:'>', amount:50000000}
+// "Лиды от ТМ (сегмент менее 3 000 000 р.)" → {cmp:'<', amount:3000000}
+function parseDeptThreshold(name) {
+  const n = String(name || '');
+  if (!/лиды от тм/i.test(n) || !/сегмент/i.test(n)) return null;
+  const numMatch = n.match(/\d[\d\s]*\d|\d/);
+  if (!numMatch) return null;
+  const amount = parseInt(numMatch[0].replace(/\s/g, ''), 10);
+  const cmp = /менее|<|до\s/i.test(n) ? '<' : '>';
+  return { cmp, amount };
+}
 
 const STATUS_IDS = {
   assigned  : '5306',
@@ -513,19 +524,21 @@ async function loadSegmentDepartments(force = false) {
     const allDepts = await apiAll('department.get', {});
     log('🏢 Всего отделов в Б24: ' + allDepts.length);
 
-    // Уникальные названия отделов, которые нам нужны
-    const neededNames = [...new Set(Object.values(SEGMENT_DEPT_NAME))];
-    const nameToId = {};
-    neededNames.forEach(name => {
-      const dep = allDepts.find(d => String(d.NAME || '').trim() === name.trim());
-      if (dep) nameToId[name] = String(dep.ID);
-      else log('⚠️ Отдел "' + name + '" не найден в Б24 — проверьте точное название в SEGMENT_DEPT_NAME.');
-    });
+    // Разбираем все отделы вида "Лиды от ТМ (сегмент ...)" и вытаскиваем порог
+    const candidates = allDepts
+      .map(d => ({ id: String(d.ID), name: String(d.NAME || ''), th: parseDeptThreshold(d.NAME) }))
+      .filter(d => d.th);
+    log('🏢 Отделов "Лиды от ТМ (сегмент ...)" найдено: ' + candidates.length +
+        (candidates.length ? ' — ' + candidates.map(c => c.name + ' [' + c.th.cmp + c.th.amount + ']').join(' | ') : ''));
 
     segmentDeptIds = {};
-    Object.keys(SEGMENT_DEPT_NAME).forEach(letter => {
-      const id = nameToId[SEGMENT_DEPT_NAME[letter]];
-      if (id) segmentDeptIds[letter] = id;
+    SEGMENT_THRESHOLDS.forEach(({ letters, cmp, amount }) => {
+      const dep = candidates.find(c => c.th.cmp === cmp && c.th.amount === amount);
+      if (dep) {
+        letters.forEach(letter => { segmentDeptIds[letter] = dep.id; });
+      } else {
+        log('⚠️ Не найден отдел под порог ' + cmp + amount + ' (буквы: ' + letters.join(',') + ') — проверьте SEGMENT_THRESHOLDS/названия отделов.');
+      }
     });
 
     // Загружаем сотрудников для каждого уникального отдела (один запрос на отдел)
