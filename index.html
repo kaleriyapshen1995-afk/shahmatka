@@ -68,14 +68,14 @@ td.slot.current-lead-slot{background:#EBF5FF}
 #lead-banner{display:none;background:#EBF5FF;border-bottom:1px solid #BDD7F0;padding:8px 16px;font-size:12px;color:#185FA5}
 
 /* ── Модалка ── */
-.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:100;align-items:flex-start;justify-content:center;padding-top:60px}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:100;align-items:flex-start;justify-content:center;padding:40px 12px;overflow-y:auto}
 .modal-bg.open{display:flex}
-.modal{background:#fff;border-radius:10px;padding:20px;width:360px;max-width:95vw;box-shadow:0 8px 32px rgba(0,0,0,.15)}
+.modal{background:#fff;border-radius:10px;padding:20px;width:360px;max-width:95vw;box-shadow:0 8px 32px rgba(0,0,0,.15);max-height:calc(100vh - 80px);overflow-y:auto;margin:auto}
 .modal h3{font-size:14px;font-weight:600;margin-bottom:14px}
 .field{margin-bottom:10px}
 .field label{display:block;font-size:11px;color:#888;margin-bottom:3px}
 .field select,.field input{width:100%;padding:6px 9px;border:1px solid #ddd;border-radius:6px;font-size:12px;height:32px}
-.modal-btns{display:flex;gap:8px;margin-top:16px;justify-content:flex-end}
+.modal-btns{display:flex;gap:8px;margin-top:16px;justify-content:flex-end;position:sticky;bottom:-20px;background:#fff;padding:12px 0 4px;border-top:1px solid #eee}
 .btn-save{background:#1a1a1a;color:#fff;border:none;padding:6px 18px;border-radius:6px;font-size:12px;cursor:pointer}
 .btn-save:disabled{background:#aaa;cursor:not-allowed}
 .btn-cancel-m{background:#fff;color:#555;border:1px solid #ddd;padding:6px 14px;border-radius:6px;font-size:12px;cursor:pointer}
@@ -1101,14 +1101,42 @@ function openModal(id, mgrId, slot, date) {
     onSegmentChange();
   }
   toggleTM();
-  document.getElementById('modal-bg').classList.add('open');
+
+  // Внутри iframe Б24 position:fixed и 100vh считаются от ВЫСОТЫ IFRAME,
+  // а не окна браузера. Мы растягиваем iframe под сетку (~1500px), поэтому
+  // модалка-оверлей уходит вниз за видимую область и кнопка "Сохранить"
+  // становится недоступной. Перед показом модалки временно сжимаем iframe
+  // до высоты окна Б24 (scrollWindow к верху), чтобы оверлей встал по центру
+  // видимой части. При закрытии — возвращаем полную высоту через fitBX24Window().
+  try {
+    if (typeof BX24 !== 'undefined') {
+      if (typeof BX24.scrollParentWindow === 'function') BX24.scrollParentWindow(0);
+      if (typeof BX24.resizeWindow === 'function') {
+        // Высота видимой области родительского окна недоступна напрямую,
+        // берём разумный максимум ~ высоту экрана.
+        const vh = Math.min(window.screen.availHeight || 900, 900);
+        BX24.resizeWindow(document.body.scrollWidth, vh);
+      }
+    }
+    window.scrollTo(0, 0);
+  } catch (e) { /* ignore */ }
+
+  const mb = document.getElementById('modal-bg');
+  mb.classList.add('open');
+  mb.scrollTop = 0;
+  const mdl = mb.querySelector('.modal');
+  if (mdl) mdl.scrollTop = 0;
 }
 
 function toggleTM() {
   document.getElementById('tm-field').style.display =
     document.getElementById('m-source').value === 'own' ? 'none' : 'block';
 }
-function closeModal() { document.getElementById('modal-bg').classList.remove('open'); }
+function closeModal() {
+  document.getElementById('modal-bg').classList.remove('open');
+  // Возвращаем полную высоту iframe под сетку
+  setTimeout(fitBX24Window, 50);
+}
 document.getElementById('modal-bg').addEventListener('click', e => {
   if (e.target === e.currentTarget) closeModal();
 });
