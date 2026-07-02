@@ -842,19 +842,57 @@ function uname(id, list) {
 
 // Список менеджеров с учётом фильтра "мгр-фильтр" + фильтра по сегменту (тулбар).
 // Используется и в сетке, и в аналитике, чтобы они не расходились.
+//
+// Логика:
+// - Если выбран сегмент → показываем СОТРУДНИКОВ ЭТОГО ОТДЕЛА напрямую,
+//   даже если они не входят в базовый отдел ОП 17. Это важно, потому что
+//   отделы сегментов ("Лиды от ТМ (сегмент ...)") — самостоятельные отделы,
+//   а не подмножество отдела 17. Раньше делалась интерсекция, и если
+//   у сегмента был отдельный состав — получался пустой список, и фильтр
+//   молча отваливался в "показать всех". Теперь этого не будет.
+// - Дополнительно фильтр по менеджеру (mgr-filter) применяется поверх.
+// - Если менеджера сегмента ещё нет в глобальном списке `managers` —
+//   докидываем его туда, чтобы карточки встреч в его строке отрисовались.
 function getFilteredManagers() {
   const sel    = document.getElementById('mgr-filter');
   const mgrVal = sel ? sel.value : '';
-  let list = mgrVal ? managers.filter(m => m.id === mgrVal) : managers;
 
+  let baseList;
   if (activeSegmentId) {
     const segList = managersForSegmentValue(activeSegmentId);
-    if (segList) {
-      const ids = new Set(segList.map(m => m.id));
-      list = list.filter(m => ids.has(m.id));
+    if (segList && segList.length) {
+      baseList = segList;
+      // Регистрируем в глобальном списке всех, кого встретили только через сегмент,
+      // чтобы uname()/openModal и т.п. знали их имена.
+      const known = new Set(managers.map(m => m.id));
+      segList.forEach(m => { if (!known.has(m.id)) managers.push(m); });
+    } else {
+      baseList = managers;
+      log('⚠️ Для выбранного сегмента (id=' + activeSegmentId + ') нет сотрудников — показываю всех.');
     }
+  } else {
+    baseList = managers;
   }
-  return list;
+
+  if (mgrVal) return baseList.filter(m => m.id === mgrVal);
+  return baseList;
+}
+
+function fitBX24Window() {
+  // Расширяет iframe приложения под высоту содержимого.
+  // Без этого во вкладке лида шахматка обрезается по высоте карточки Б24.
+  try {
+    if (typeof BX24 === 'undefined') return;
+    // Считаем полную высоту документа + запас 20px
+    const h = Math.max(
+      document.body.scrollHeight,
+      document.documentElement.scrollHeight,
+      document.body.offsetHeight,
+      document.documentElement.offsetHeight
+    ) + 20;
+    if (typeof BX24.resizeWindow === 'function') BX24.resizeWindow(document.body.scrollWidth, h);
+    else if (typeof BX24.fitWindow === 'function') BX24.fitWindow();
+  } catch (e) { /* silent — БX24 ещё не готов */ }
 }
 
 function renderGrid() {
@@ -963,6 +1001,9 @@ function renderAnalytics() {
 
   if (!mgrList.length) html = '<tr><td colspan="8" style="text-align:center;color:#aaa;padding:16px">Нет данных</td></tr>';
   document.getElementById('analytics-body').innerHTML = html;
+
+  // Дадим DOM отрисоваться, затем растянем iframe под высоту содержимого
+  setTimeout(fitBX24Window, 50);
 }
 
 // ════════════════════════════════════════════════
@@ -1033,11 +1074,15 @@ function openModal(id, mgrId, slot, date) {
     }
     onSegmentChange();
   } else {
-    // Новый слот — если есть контекст лида, подставляем данные лида
+    // Новый слот
     document.getElementById('m-source').value = currentLeadId ? 'tm' : 'tm';
     document.getElementById('m-client').value = '';
-    document.getElementById('m-segment').value = '';
-    // Если открыто из карточки лида — подтянуть название и сегментацию лида
+
+    // 1) Первое приближение: сегмент из тулбара, если выбран.
+    //    Если у привязанного лида окажется другой — перезапишем ниже.
+    document.getElementById('m-segment').value = activeSegmentId || '';
+
+    // 2) Если открыто из карточки лида — подтягиваем название и сегмент лида.
     if (currentLeadId) {
       apiOne('crm.lead.get', { id: parseInt(currentLeadId) })
         .then(lead => {
@@ -1318,6 +1363,7 @@ async function checkPlacements() {
     return;
   }
   BX24.init(async function () {
+    fitBX24Window();
     // 1. Определяем, из какой карточки открыта вкладка (лид/сделка),
     //    и подтягиваем нужный лид автоматически.
     try {
