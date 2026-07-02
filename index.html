@@ -487,6 +487,20 @@ async function loadUsers(force = false) {
 //  СЕГМЕНТАЦИЯ СЕЛЛЕРА (UF_CRM_1730551844)
 // ════════════════════════════════════════════════
 
+// Буква сегмента в списке Б24 может быть набрана КИРИЛЛИЦЕЙ (А, В, С, Е, Н...),
+// а SEGMENT_THRESHOLDS/segmentDeptIds используют ЛАТИНИЦУ (A, B, C, E, H...).
+// Внешне буквы неотличимы, но это разные символы — из-за этого фильтр по
+// сегменту "не находил" сотрудников. Приводим к латинице.
+function normalizeSegLetter(ch) {
+  const up = String(ch || '').toUpperCase();
+  const cyr2lat = {
+    'А':'A','В':'B','С':'C','Е':'E','Н':'H','К':'K','М':'M','О':'O',
+    'Р':'P','Т':'T','Х':'X','У':'Y'
+    // D, F, G — латинских двойников в кириллице нет, останутся как есть
+  };
+  return cyr2lat[up] || up;
+}
+
 // Расшифровываем список значений поля (crm.lead.fields):
 //  - сегментацию UF_CRM_1730551844 (буква A/C/D/...),
 //  - статус встречи UF_CRM_1779825277 (Назначена/Подтверждена/Проведена/Перенесена),
@@ -511,7 +525,8 @@ async function loadSegmentField(force = false) {
     segmentFieldItems = fieldDef.items.map(it => {
       const value = String(it.VALUE || '');
       const m = value.match(/^\s*([A-Za-zА-Яа-я])\s*[-—]/); // "A - 50 млн..." → "A"
-      return { id: String(it.ID), letter: m ? m[1].toUpperCase() : null, label: value };
+      const letter = m ? normalizeSegLetter(m[1]) : null;
+      return { id: String(it.ID), letter, label: value };
     });
     segmentIdToLetter = {};
     segmentFieldItems.forEach(it => { if (it.letter) segmentIdToLetter[it.id] = it.letter; });
@@ -639,9 +654,14 @@ async function loadSegmentDepartments(force = false) {
 function managersForSegmentValue(segId) {
   if (!segId) return null;
   const letter = segmentIdToLetter[String(segId)];
-  if (!letter) return null;
+  if (!letter) { log('🔎 сегмент id=' + segId + ': буква не определена (segmentIdToLetter пуст?)'); return null; }
   const list = segmentManagers[letter];
-  return (list && list.length) ? list : null;
+  if (!list || !list.length) {
+    log('🔎 сегмент id=' + segId + ' → буква ' + letter + ', но segmentManagers[' + letter + '] пуст. ' +
+        'Ключи segmentManagers: ' + Object.keys(segmentManagers).join(',') || '(нет)');
+    return null;
+  }
+  return list;
 }
 
 function fillSegmentFilterSelect() {
@@ -1328,7 +1348,7 @@ function setStatus(msg, type='') {
   el.className   = 'status-bar' + (type ? ' '+type : '');
 }
 
-const BUILD_VERSION = 'shahmatka build 2026-07-02 #13 (status-fix)';
+const BUILD_VERSION = 'shahmatka build 2026-07-02 #14 (cyrillic-letter-fix)';
 
 function log(msg) {
   const b = document.getElementById('debug-box');
