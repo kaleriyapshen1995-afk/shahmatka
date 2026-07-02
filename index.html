@@ -244,13 +244,14 @@ td.slot.current-lead-slot{background:#EBF5FF}
 // Вебхук Б24 — прямой вызов, без прокси
 const WEBHOOK = 'https://crm.seller24.ru/rest/5/9yr3u419ap9cvzn7/';
 const F = {
-  date    : 'UF_CRM_1750841189',   // дата/время встречи (основное поле в системе)
-  status  : 'UF_CRM_1779825277',   // статус встречи
-  tm      : 'UF_CRM_1675251074',   // телемаркетолог
-  manager : 'ASSIGNED_BY_ID',      // ответственный менеджер ОП
-  client  : 'TITLE',               // название лида/сделки
-  product : 'UF_CRM_642D1C1B1609C', // продукт (держать)
-  segment : 'UF_CRM_1730551844',   // сегментация селлера (список, значения вида "A - 50 млн. и более")
+  date     : 'UF_CRM_1750841189',   // дата/время встречи (основное поле в системе)
+  status   : 'UF_CRM_1779825277',   // статус встречи
+  tm       : 'UF_CRM_1675251074',   // телемаркетолог
+  manager  : 'UF_CRM_1781713296',   // менеджер ОП, выбранный в шахматке (НЕ трогаем ASSIGNED_BY_ID)
+  assigned : 'ASSIGNED_BY_ID',      // ответственный лида — оставляем как есть, не перезаписываем
+  client   : 'TITLE',               // название лида/сделки
+  product  : 'UF_CRM_642D1C1B1609C', // продукт (держать)
+  segment  : 'UF_CRM_1730551844',   // сегментация селлера (список, значения вида "A - 50 млн. и более")
 };
 
 // Пороги сегментов (буква → сравнение и сумма в рублях), по которым ищем
@@ -317,6 +318,7 @@ let activeSegmentId   = '';   // текущий выбранный сегмен�
 const URL_PARAMS  = new URLSearchParams(window.location.search);
 let currentLeadId = URL_PARAMS.get('lead_id') || null;
 let currentDealId = URL_PARAMS.get('deal_id') || null;
+let autoJumpDone  = false; // дату шахматки под дату встречи лида переключаем только раз
 let currentDomain = URL_PARAMS.get('DOMAIN') || '';
 
 // Б24 передаёт PLACEMENT и PLACEMENT_OPTIONS через URL после нашего редиректа через Worker.
@@ -599,7 +601,7 @@ function onSegmentFilterChange() {
 // ════════════════════════════════════════════════
 async function loadEntries(from, to, force = false) {
   try {
-    const SELECT = ['ID','TITLE','STATUS_ID','ASSIGNED_BY_ID', F.date, F.status, F.tm, F.product, F.segment];
+    const SELECT = ['ID','TITLE','STATUS_ID','ASSIGNED_BY_ID', F.manager, F.date, F.status, F.tm, F.product, F.segment];
     const ORDER  = { [F.date]: 'ASC' };
     const cacheKey = 'sh_leads_' + from + '_' + to;
 
@@ -729,23 +731,25 @@ async function saveEntry() {
 
     const fields = {
       TITLE          : client || (source === 'own' ? 'Своя встреча' : 'Встреча от ТМ'),
-      ASSIGNED_BY_ID : parseInt(mgrId),
+      [F.manager]    : parseInt(mgrId) || null,   // менеджер из шахматки → в отдельное поле
       [F.date]       : dtVal ? dtVal + ':00' : '',
       [F.tm]         : source === 'tm' ? (parseInt(tmId) || null) : null,
       [F.status]     : statusVal,
       [F.product]    : productVal,
       [F.segment]    : segVal || null,
     };
+    // ВАЖНО: ASSIGNED_BY_ID (ответственный лида) намеренно НЕ включаем в fields —
+    // ответственный должен оставаться прежним. Менеджер встречи хранится в F.manager.
 
     let savedLeadId = null;
     if (editId) {
-      // Редактирование существующей встречи (клик на занятую ячейку) — меняем всё
+      // Редактирование существующей встречи (клик на занятую ячейку)
       await apiOne('crm.lead.update', { id: parseInt(editId), fields });
       savedLeadId = editId;
     } else if (currentLeadId) {
       // Назначение встречи из карточки лида.
-      // Лид переходит к выбранному менеджеру ОП (ASSIGNED_BY_ID меняется на mgrId).
       // Название лида (TITLE) не трогаем — оно уже есть у лида.
+      // Ответственного (ASSIGNED_BY_ID) тоже не трогаем.
       const updateFields = { ...fields };
       delete updateFields.TITLE;
       await apiOne('crm.lead.update', { id: parseInt(currentLeadId), fields: updateFields });
@@ -1300,13 +1304,19 @@ async function loadData(forceReloadUsers=false) {
             allEntries.push(mapped);
             log('🎯 Лид добавлен в сетку. Всего entries: ' + allEntries.length);
 
-            // Автоматически переключаем шахматку на день этой встречи
-            const todayKey = dateKey(currentDate);
-            if (mapped.date !== todayKey) {
-              const [y, m, d] = mapped.date.split('-').map(Number);
-              currentDate = new Date(y, m - 1, d);
-              document.getElementById('date-pick').value = mapped.date;
-              log('📅 Дата шахматки переключена на ' + mapped.date);
+            // Автоматически переключаем шахматку на день этой встречи —
+            // но ТОЛЬКО при первом открытии карточки. После сохранения (в т.ч.
+            // на другой день) loadData вызывается снова, и повторный прыжок
+            // ломал навигацию (кидало на дату встречи без возможности вернуться).
+            if (!autoJumpDone) {
+              const todayKey = dateKey(currentDate);
+              if (mapped.date && mapped.date !== todayKey) {
+                const [y, m, d] = mapped.date.split('-').map(Number);
+                currentDate = new Date(y, m - 1, d);
+                document.getElementById('date-pick').value = mapped.date;
+                log('📅 Дата шахматки переключена на ' + mapped.date);
+              }
+              autoJumpDone = true;
             }
 
             // Проверяем что продукт совпадает с выбранным
