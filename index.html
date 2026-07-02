@@ -137,7 +137,8 @@ td.slot.current-lead-slot{background:#EBF5FF}
     <option value="">Все сегменты</option>
   </select>
 
-  <button class="btn-refresh" onclick="loadData(true)">↻ Обновить</button>
+  <button class="btn-refresh" onclick="reloadAll()">↻ Обновить</button>
+  <button class="btn-refresh" onclick="clearAllCache()" title="Полностью очистить локальный кэш и перезагрузить страницу">🧹 Очистить кэш</button>
   <button class="btn-refresh" id="btn-bind" onclick="registerPlacements()" style="background:#185FA5;color:#fff;border-color:#185FA5">📎 Привязать к лидам/сделкам</button>
   <span class="status-bar" id="status">Инициализация...</span>
 </div>
@@ -469,7 +470,7 @@ async function loadUsers(force = false) {
 // сегмента из текста, например "A - 50 млн. и более" → 'A'.
 async function loadSegmentField(force = false) {
   try {
-    const cached = !force && cacheGet('sh_segment_field', 6 * 60 * 60 * 1000);
+    const cached = !force && cacheGet('sh_segment_field_v3', 6 * 60 * 60 * 1000);
     if (cached) {
       segmentFieldItems = cached.items;
       segmentIdToLetter = cached.idToLetter;
@@ -495,7 +496,7 @@ async function loadSegmentField(force = false) {
     segmentIdToLetter = {};
     segmentFieldItems.forEach(it => { if (it.letter) segmentIdToLetter[it.id] = it.letter; });
 
-    cacheSet('sh_segment_field', { items: segmentFieldItems, idToLetter: segmentIdToLetter });
+    cacheSet('sh_segment_field_v3', { items: segmentFieldItems, idToLetter: segmentIdToLetter });
     log('🏷️ Сегменты найдены: ' + segmentFieldItems.map(i => `${i.letter || '?'}(id${i.id})`).join(', '));
     fillSegmentFilterSelect();
 
@@ -513,7 +514,7 @@ async function loadSegmentField(force = false) {
 // Находим ID отделов по названию (department.get) и грузим их сотрудников.
 async function loadSegmentDepartments(force = false) {
   try {
-    const cached = !force && cacheGet('sh_segment_depts', 6 * 60 * 60 * 1000);
+    const cached = !force && cacheGet('sh_segment_depts_v3', 6 * 60 * 60 * 1000);
     if (cached) {
       segmentDeptIds  = cached.deptIds;
       segmentManagers = cached.managers;
@@ -559,7 +560,7 @@ async function loadSegmentDepartments(force = false) {
       segmentManagers[letter] = usersByDept[segmentDeptIds[letter]] || [];
     });
 
-    cacheSet('sh_segment_depts', { deptIds: segmentDeptIds, managers: segmentManagers });
+    cacheSet('sh_segment_depts_v3', { deptIds: segmentDeptIds, managers: segmentManagers });
     log('🏢 Отделы сегментов: ' + Object.keys(segmentDeptIds).map(k => k + '=' + segmentDeptIds[k] + ' (' + (segmentManagers[k]||[]).length + ' чел.)').join(', '));
   } catch (e) {
     log('⚠️ loadSegmentDepartments: ' + e.message);
@@ -1533,6 +1534,41 @@ function openLeadCard(leadId) {
 
 if (currentLeadId) showLeadBanner();
 if (currentDealId && !currentLeadId) autoLinkDealToLead();
+
+// «Обновить» в тулбаре: сбрасываем все динамические данные с force=true —
+// заново тянем сегменты и отделы (важно, если поменялся состав отделов Б24 или
+// значения списка), а не только встречи.
+async function reloadAll() {
+  log('↻ Полное обновление (сегменты + отделы + пользователи + лиды)...');
+  await Promise.all([
+    loadSegmentField(true),
+    loadSegmentDepartments(true),
+    loadUsers(true),
+  ]);
+  await loadData(true);
+  fillSegmentFilterSelect();
+  renderGrid();
+  renderAnalytics();
+}
+
+// Полная очистка локального кэша шахматки + перезагрузка страницы.
+// Используется когда в кэше застряли протухшие данные (например, до фикса
+// отделы закэшировались пустыми и мешают увидеть свежий результат).
+function clearAllCache() {
+  try {
+    const keys = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith('sh_')) keys.push(k);
+    }
+    keys.forEach(k => localStorage.removeItem(k));
+    log('🧹 Очищено ключей кэша: ' + keys.length + ' (' + keys.join(', ') + ')');
+  } catch (e) {
+    log('⚠️ clearAllCache: ' + e.message);
+  }
+  // Перезагружаем страницу с игнором HTTP-кэша, чтобы точно взять свежий HTML/JS
+  location.reload();
+}
 
 checkPlacements();
 Promise.all([loadSegmentField(), loadSegmentDepartments()]).then(() => {
