@@ -202,7 +202,26 @@ td.slot.current-lead-slot{background:#EBF5FF}
       </select>
     </div>
     <div class="field"><label>Менеджер ОП</label><select id="m-mgr"></select></div>
-    <div class="field"><label>Дата и время</label><input type="datetime-local" id="m-datetime"></div>
+    <div class="field">
+      <label>Дата встречи</label>
+      <input type="date" id="m-date" onchange="updateDateTimePreview()">
+    </div>
+    <div class="field">
+      <label>Время встречи</label>
+      <select id="m-time" onchange="updateDateTimePreview()">
+        <option value="09:00">09:00</option>
+        <option value="10:00">10:00</option>
+        <option value="11:00">11:00</option>
+        <option value="12:00">12:00</option>
+        <option value="13:00">13:00</option>
+        <option value="14:00">14:00</option>
+        <option value="15:00">15:00</option>
+        <option value="16:00">16:00</option>
+        <option value="17:00">17:00</option>
+        <option value="18:00">18:00</option>
+      </select>
+      <div id="dt-preview" style="margin-top:6px;font-size:12px;font-weight:600;color:#185FA5;background:#eaf3fb;border-radius:6px;padding:6px 9px">📅 —</div>
+    </div>
     <div class="field">
       <label>Источник назначения</label>
       <select id="m-source" onchange="toggleTM()">
@@ -691,7 +710,13 @@ function mapLead(item) {
 
   const hasTM   = !!(item[F.tm]);
   const source  = hasTM ? 'tm' : 'own';
-  const mgrId   = String(item[F.manager] || item.ASSIGNED_BY_ID || '');
+  // UF_CRM_1781713296 может вернуться как массив (поле "Привязка к сотруднику")
+  // или как строка/число. Нормализуем к строковому ID. Фолбэк на ASSIGNED_BY_ID —
+  // только для старых записей, где менеджер ещё лежал в ответственном.
+  let rawMgr = item[F.manager];
+  if (Array.isArray(rawMgr)) rawMgr = rawMgr[0];
+  const mgrFromField = rawMgr ? String(rawMgr) : '';
+  const mgrId   = mgrFromField || String(item.ASSIGNED_BY_ID || '');
   const pVal    = String(item[F.product] || '');
   const product = pVal === PRODUCT_IDS.platform ? 'platform' : 'accounting';
 
@@ -713,7 +738,9 @@ async function saveEntry() {
   btn.disabled = true; btn.textContent = 'Сохранение...';
   try {
     const mgrId   = document.getElementById('m-mgr').value;
-    const dtVal   = document.getElementById('m-datetime').value;
+    const dDate   = document.getElementById('m-date').value;   // YYYY-MM-DD
+    const dTime   = document.getElementById('m-time').value;   // HH:MM
+    const dtVal   = (dDate && dTime) ? (dDate + 'T' + dTime) : '';
     const source  = document.getElementById('m-source').value;
     const tmId    = document.getElementById('m-tm').value;
     const client  = document.getElementById('m-client').value;
@@ -761,7 +788,18 @@ async function saveEntry() {
     }
 
     closeModal();
-    await loadData(true);  // force=true — игнорируем кэш, чтобы свежая встреча сразу появилась
+
+    // Обновляем встречи текущего периода БЕЗ повторного автоподтягивания
+    // лида (иначе loadData снова дёргает дату/сегмент/продукт и "обновляет"
+    // экран, сбивая контекст). Просто перезагружаем список встреч за период.
+    try {
+      const dates = getDates();
+      const from  = dateKey(dates[0]);
+      const to    = dateKey(dates[dates.length - 1]);
+      allEntries  = await loadEntries(from, to, true);
+    } catch (e) {
+      log('⚠️ Не удалось обновить период после сохранения: ' + e.message);
+    }
 
     // Гарантированно подтягиваем только что сохранённый лид и добавляем в сетку.
     // Это нужно потому что серверный фильтр Б24 по UF-дате может его не вернуть.
@@ -770,13 +808,43 @@ async function saveEntry() {
         const lead = await apiOne('crm.lead.get', { id: parseInt(savedLeadId) });
         if (lead) {
           const mapped = mapLead(lead);
-          // Удаляем старую версию если была
+          log('💾 Сохранено: лид #' + savedLeadId +
+              ' | поле менеджера ' + F.manager + '=' + JSON.stringify(lead[F.manager]) +
+              ' | ответственный ASSIGNED_BY_ID=' + lead.ASSIGNED_BY_ID +
+              ' | дата ' + F.date + '=' + JSON.stringify(lead[F.date]));
+          log('💾 mapped → mgr=' + mapped.mgr + ', date=' + mapped.date + ', slot=' + mapped.slot + ', product=' + mapped.product);
+
+          // Если сохранили на дату, отличную от текущей выбранной — сразу
+          // переключаем шахматку на эту дату, чтобы встреча была видна.
+          const curKey = dateKey(currentDate);
+          if (period === 'day' && mapped.date && mapped.date !== curKey) {
+            const [y, m, d] = mapped.date.split('-').map(Number);
+            currentDate = new Date(y, m - 1, d);
+            const dpick = document.getElementById('date-pick');
+            if (dpick) dpick.value = mapped.date;
+            log('📅 Переключаю шахматку на дату встречи: ' + mapped.date);
+          }
+
+          // Если менеджер встречи не в текущем списке строк — добавим его,
+          // иначе встреча "исчезнет" (не будет строки, куда её положить).
+          if (mapped.mgr && !managers.find(m => m.id === mapped.mgr)) {
+            try {
+              const u = await apiOne('user.get', { ID: parseInt(mapped.mgr) });
+              const uu = Array.isArray(u) ? u[0] : u;
+              const nm = uu ? ((uu.NAME || '') + ' ' + (uu.LAST_NAME || '')).trim() : ('Пользователь #' + mapped.mgr);
+              managers.push({ id: mapped.mgr, name: nm });
+              log('➕ Менеджер #' + mapped.mgr + ' (' + nm + ') добавлен в сетку');
+            } catch (e) {
+              managers.push({ id: mapped.mgr, name: 'Пользователь #' + mapped.mgr });
+            }
+          }
+
+          // Удаляем старую версию если была, добавляем свежую
           allEntries = allEntries.filter(e => e.id !== String(savedLeadId));
-          // Добавляем свежую
           allEntries.push(mapped);
           renderGrid();
           renderAnalytics();
-          log('✅ Лид #' + savedLeadId + ' добавлен в сетку напрямую');
+          log('✅ Лид #' + savedLeadId + ' в сетке. Всего встреч: ' + allEntries.length);
         }
       } catch (e) {
         log('⚠️ Не удалось подтянуть свежий лид #' + savedLeadId + ': ' + e.message);
@@ -1051,7 +1119,9 @@ function openModal(id, mgrId, slot, date) {
   document.getElementById('m-segment').innerHTML = '<option value="">— не указана —</option>' +
     segmentFieldItems.map(i => `<option value="${i.id}">${i.label}</option>`).join('');
 
-  document.getElementById('m-datetime').value = date + 'T' + slot.slice(0, 5);
+  document.getElementById('m-date').value = date;
+  document.getElementById('m-time').value = slot.slice(0, 5);
+  updateDateTimePreview();
   document.getElementById('m-product').value  = currentProduct;
   document.getElementById('modal-title').textContent = id ? 'Редактировать встречу' : 'Новая встреча';
   document.getElementById('btn-del').style.display = id ? 'block' : 'none';
@@ -1130,6 +1200,19 @@ function openModal(id, mgrId, slot, date) {
   mb.scrollTop = 0;
   const mdl = mb.querySelector('.modal');
   if (mdl) mdl.scrollTop = 0;
+}
+
+function updateDateTimePreview() {
+  const d = document.getElementById('m-date').value;
+  const t = document.getElementById('m-time').value;
+  const box = document.getElementById('dt-preview');
+  if (!box) return;
+  if (!d || !t) { box.textContent = '📅 Выберите дату и время'; return; }
+  const [y, m, day] = d.split('-').map(Number);
+  const dt = new Date(y, m - 1, day);
+  const dow  = ['воскресенье','понедельник','вторник','среда','четверг','пятница','суббота'][dt.getDay()];
+  const mon  = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'][m - 1];
+  box.textContent = '📅 ' + day + ' ' + mon + ' ' + y + ' (' + dow + '), ' + t;
 }
 
 function toggleTM() {
