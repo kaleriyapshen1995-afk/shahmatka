@@ -4,86 +4,112 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Шахматка встреч</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
+:root{
+  /* Палитра Seller24 */
+  --blue-700:#1d4ed8; --blue-600:#2563eb; --blue-500:#3b82f6;
+  --blue-200:#bcd3fb; --blue-100:#e3edfd; --blue-50:#f2f7ff;
+  --ink-900:#16202b; --ink-700:#36424f; --ink-500:#67727e;
+  --line:#e6eaf0; --white:#fff; --bg:#f6f8fb;
+  --violet:#7c3aed; --violet-50:#f3eefe;
+  /* Статусы встреч */
+  --st-assigned:#8a94a3; --st-confirmed:#0ea5a0; --st-done:#16a34a;
+  --st-moved:#d97706; --st-cancel:#dc2626; --st-own:var(--blue-600);
+  --radius:14px; --radius-sm:10px;
+  --shadow:0 8px 30px rgba(29,78,216,.08);
+  --shadow-sm:0 2px 10px rgba(29,78,216,.06);
+}
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f3;color:#1a1a1a;font-size:13px}
+body{font-family:'Inter',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--ink-700);font-size:13px;font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
+h1,h2,h3,h4,strong,.mgr-cell{font-family:'Manrope','Inter',system-ui,sans-serif}
 
 /* ── Топбар ── */
-.topbar{background:#fff;border-bottom:1px solid #e5e5e2;padding:10px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;position:sticky;top:0;z-index:10}
-.topbar strong{font-size:15px;font-weight:600}
-.divider{width:1px;height:20px;background:#e5e5e2}
-.tab-group{display:flex;gap:3px}
-.tab-btn{padding:5px 14px;border:1px solid #ddd;border-radius:6px;background:#f5f5f3;font-size:12px;cursor:pointer;color:#555;transition:all .15s}
-.tab-btn.active{background:#1a1a1a;color:#fff;border-color:#1a1a1a}
-.tab-btn.product-btn.active-acc{background:#185FA5;border-color:#185FA5;color:#fff}
-.tab-btn.product-btn.active-plat{background:#7B3FB5;border-color:#7B3FB5;color:#fff}
-input[type=date]{font-size:12px;padding:5px 8px;border:1px solid #ddd;border-radius:6px;height:30px}
-.btn-refresh{padding:5px 12px;border:1px solid #ddd;border-radius:6px;background:#fff;font-size:12px;cursor:pointer}
-.btn-refresh:hover{background:#f0f0ee}
-.status-bar{font-size:11px;color:#888;margin-left:auto}
-.status-bar.error{color:#c0392b}.status-bar.loading{color:#2980b9}
+.topbar{background:var(--white);border-bottom:1px solid var(--line);padding:12px 20px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;position:sticky;top:0;z-index:10;box-shadow:var(--shadow-sm)}
+.topbar strong{font-size:16px;font-weight:800;color:var(--ink-900);letter-spacing:-.01em}
+.divider{width:1px;height:22px;background:var(--line)}
+.tab-group{display:flex;gap:4px;background:var(--blue-50);padding:3px;border-radius:11px}
+.tab-btn{padding:6px 15px;border:1px solid transparent;border-radius:8px;background:transparent;font-size:12px;font-weight:600;cursor:pointer;color:var(--ink-500);transition:all .15s}
+.tab-btn:hover{color:var(--blue-700)}
+.tab-btn.active{background:var(--white);color:var(--ink-900);box-shadow:var(--shadow-sm)}
+.tab-btn.product-btn.active-acc{background:var(--blue-600);border-color:var(--blue-600);color:#fff}
+.tab-btn.product-btn.active-plat{background:var(--violet);border-color:var(--violet);color:#fff}
+input[type=date]{font-family:'Inter';font-size:12px;padding:7px 10px;border:1px solid var(--line);border-radius:9px;height:34px;color:var(--ink-700)}
+input[type=date]:focus{outline:none;border-color:var(--blue-500);box-shadow:0 0 0 3px var(--blue-100)}
+select{font-family:'Inter'}
+.btn-refresh{padding:7px 14px;border:1px solid var(--line);border-radius:9px;background:var(--white);font-size:12px;font-weight:600;color:var(--ink-700);cursor:pointer;transition:.15s}
+.btn-refresh:hover{border-color:var(--blue-500);color:var(--blue-700);box-shadow:var(--shadow-sm)}
+.status-bar{font-size:11px;color:var(--ink-500);margin-left:auto}
+.status-bar.error{color:var(--st-cancel);font-weight:600}.status-bar.loading{color:var(--blue-600)}
 
 /* ── Сетка ── */
-.main{padding:12px 16px}
-.grid-wrap{overflow-x:auto;border-radius:8px;border:1px solid #e5e5e2;background:#fff}
+.main{padding:16px 20px}
+.grid-wrap{overflow-x:auto;border-radius:var(--radius);border:1px solid var(--line);background:var(--white);box-shadow:var(--shadow-sm)}
 table{border-collapse:collapse;min-width:100%}
-thead th{background:#fafaf8;font-weight:500;font-size:11px;color:#666;padding:7px 6px;white-space:nowrap;border-bottom:1px solid #e5e5e2;border-right:1px solid #e5e5e2;text-align:center}
-thead th.mgr-h{text-align:left;min-width:130px;position:sticky;left:0;z-index:3;background:#fafaf8}
-td.mgr-cell{background:#fafaf8;font-size:12px;font-weight:500;padding:6px 10px;border-bottom:1px solid #e5e5e2;border-right:1px solid #e5e5e2;white-space:nowrap;position:sticky;left:0;z-index:1;min-width:130px}
-td.slot{width:80px;min-width:80px;height:42px;border-bottom:1px solid #e5e5e2;border-right:1px solid #e5e5e2;vertical-align:middle;text-align:center;cursor:pointer}
-td.slot.empty:hover{background:#f0f0ee}
-td.slot.current-lead-slot{background:#EBF5FF}
-.cell{font-size:10px;padding:2px 5px;border-radius:4px;display:inline-block;max-width:74px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#fff;line-height:1.5}
-.s-assigned{background:#888780}
-.s-confirmed{background:#1D9E75}
-.s-done{background:#3B6D11}
-.s-moved{background:#BA7517}
-.s-cancel{background:#c0392b}
-.s-own{background:#185FA5}
+thead th{background:var(--blue-50);font-weight:600;font-size:11px;color:var(--ink-500);padding:10px 6px;white-space:nowrap;border-bottom:1px solid var(--line);border-right:1px solid var(--line);text-align:center;letter-spacing:.02em}
+thead th.mgr-h{text-align:left;min-width:150px;position:sticky;left:0;z-index:3;background:var(--blue-50);font-family:'Manrope';font-weight:700;color:var(--ink-900)}
+td.mgr-cell{background:var(--white);font-size:12px;font-weight:600;color:var(--ink-900);padding:9px 14px;border-bottom:1px solid var(--line);border-right:1px solid var(--line);white-space:nowrap;position:sticky;left:0;z-index:1;min-width:150px}
+tbody tr:hover td.mgr-cell{background:var(--blue-50)}
+td.slot{width:82px;min-width:82px;height:46px;border-bottom:1px solid var(--line);border-right:1px solid var(--line);vertical-align:middle;text-align:center;cursor:pointer;transition:background .12s}
+td.slot.empty:hover{background:var(--blue-50)}
+td.slot.current-lead-slot{background:var(--blue-100)}
+.cell{font-size:10px;font-weight:600;padding:3px 7px;border-radius:6px;display:inline-block;max-width:76px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#fff;line-height:1.6;box-shadow:var(--shadow-sm)}
+.s-assigned{background:var(--st-assigned)}
+.s-confirmed{background:var(--st-confirmed)}
+.s-done{background:var(--st-done)}
+.s-moved{background:var(--st-moved)}
+.s-cancel{background:var(--st-cancel)}
+.s-own{background:var(--st-own)}
 
 /* ── Легенда ── */
-.legend{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0}
-.leg{display:flex;align-items:center;gap:4px;font-size:11px;color:#555}
-.leg-dot{width:10px;height:10px;border-radius:2px;flex-shrink:0}
+.legend{display:flex;gap:14px;flex-wrap:wrap;margin:14px 2px}
+.leg{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--ink-500);font-weight:500}
+.leg-dot{width:11px;height:11px;border-radius:3px;flex-shrink:0}
 
 /* ── Аналитика ── */
-.section-title{font-size:13px;font-weight:600;margin-bottom:8px;margin-top:16px;display:flex;align-items:center;gap:8px}
-.product-badge{font-size:11px;font-weight:500;padding:2px 10px;border-radius:20px;color:#fff}
-.badge-acc{background:#185FA5}
-.badge-plat{background:#7B3FB5}
-.analytics{background:#fff;border-radius:8px;border:1px solid #e5e5e2;overflow:hidden}
+.section-title{font-family:'Manrope';font-size:15px;font-weight:800;color:var(--ink-900);margin-bottom:10px;margin-top:22px;display:flex;align-items:center;gap:8px}
+.product-badge{font-size:11px;font-weight:600;padding:3px 12px;border-radius:999px;color:#fff}
+.badge-acc{background:var(--blue-600)}
+.badge-plat{background:var(--violet)}
+.analytics{background:var(--white);border-radius:var(--radius);border:1px solid var(--line);overflow:hidden;box-shadow:var(--shadow-sm)}
 .an-table{width:100%;border-collapse:collapse}
-.an-table th{background:#fafaf8;padding:8px 12px;text-align:left;border-bottom:1px solid #e5e5e2;font-weight:500;font-size:11px;color:#666;white-space:nowrap}
+.an-table th{background:var(--blue-50);padding:10px 14px;text-align:left;border-bottom:1px solid var(--line);font-weight:600;font-size:11px;color:var(--ink-500);white-space:nowrap;letter-spacing:.02em}
 .an-table th.right{text-align:right}
-.an-table td{padding:8px 12px;border-bottom:1px solid #f0f0ee;font-size:12px}
+.an-table td{padding:10px 14px;border-bottom:1px solid var(--line);font-size:12px;color:var(--ink-700)}
 .an-table td.right{text-align:right}
 .an-table tr:last-child td{border-bottom:none}
-.an-table tr:hover td{background:#fafaf8}
-.an-table .total-row td{font-weight:600;background:#fafaf8;border-top:1px solid #e5e5e2}
-.cr-good{color:#3B6D11;font-weight:600}
-.cr-mid{color:#BA7517;font-weight:600}
-.cr-low{color:#c0392b;font-weight:600}
+.an-table tr:hover td{background:var(--blue-50)}
+.an-table .total-row td{font-weight:700;color:var(--ink-900);background:var(--blue-50);border-top:2px solid var(--line)}
+.cr-good{color:var(--st-done);font-weight:700}
+.cr-mid{color:var(--st-moved);font-weight:700}
+.cr-low{color:var(--st-cancel);font-weight:700}
 
 /* ── Баннер лида ── */
-#lead-banner{display:none;background:#EBF5FF;border-bottom:1px solid #BDD7F0;padding:8px 16px;font-size:12px;color:#185FA5}
+#lead-banner{display:none;background:var(--blue-50);border-bottom:1px solid var(--blue-200);padding:10px 20px;font-size:12px;font-weight:500;color:var(--blue-700)}
 
 /* ── Модалка ── */
-.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:100;align-items:flex-start;justify-content:center;padding:40px 12px;overflow-y:auto}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(22,32,43,.45);z-index:100;align-items:flex-start;justify-content:center;padding:40px 12px;overflow-y:auto;backdrop-filter:blur(2px)}
 .modal-bg.open{display:flex}
-.modal{background:#fff;border-radius:10px;padding:20px;width:360px;max-width:95vw;box-shadow:0 8px 32px rgba(0,0,0,.15);max-height:calc(100vh - 80px);overflow-y:auto;margin:auto}
-.modal h3{font-size:14px;font-weight:600;margin-bottom:14px}
-.field{margin-bottom:10px}
-.field label{display:block;font-size:11px;color:#888;margin-bottom:3px}
-.field select,.field input{width:100%;padding:6px 9px;border:1px solid #ddd;border-radius:6px;font-size:12px;height:32px}
-.modal-btns{display:flex;gap:8px;margin-top:16px;justify-content:flex-end;position:sticky;bottom:-20px;background:#fff;padding:12px 0 4px;border-top:1px solid #eee}
-.btn-save{background:#1a1a1a;color:#fff;border:none;padding:6px 18px;border-radius:6px;font-size:12px;cursor:pointer}
-.btn-save:disabled{background:#aaa;cursor:not-allowed}
-.btn-cancel-m{background:#fff;color:#555;border:1px solid #ddd;padding:6px 14px;border-radius:6px;font-size:12px;cursor:pointer}
-.btn-del{background:#fff;color:#c0392b;border:1px solid #e5a5a5;padding:6px 14px;border-radius:6px;font-size:12px;cursor:pointer}
+.modal{background:var(--white);border-radius:var(--radius);padding:24px;width:380px;max-width:95vw;box-shadow:0 20px 60px rgba(22,32,43,.25);max-height:calc(100vh - 80px);overflow-y:auto;margin:auto}
+.modal h3{font-family:'Manrope';font-size:18px;font-weight:800;color:var(--ink-900);margin-bottom:16px}
+.field{margin-bottom:12px}
+.field label{display:block;font-size:11px;font-weight:600;color:var(--ink-500);margin-bottom:5px;letter-spacing:.02em;text-transform:uppercase}
+.field select,.field input{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-size:13px;height:38px;color:var(--ink-700);background:#fff;transition:.15s}
+.field select:focus,.field input:focus{outline:none;border-color:var(--blue-500);box-shadow:0 0 0 3px var(--blue-100)}
+.modal-btns{display:flex;gap:8px;margin-top:18px;justify-content:flex-end;position:sticky;bottom:-24px;background:var(--white);padding:14px 0 4px;border-top:1px solid var(--line)}
+.btn-save{background:var(--blue-700);color:#fff;border:none;padding:10px 22px;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;transition:.15s}
+.btn-save:hover{background:var(--blue-600);box-shadow:var(--shadow)}
+.btn-save:disabled{background:var(--ink-500);cursor:not-allowed}
+.btn-cancel-m{background:#fff;color:var(--ink-700);border:1px solid var(--line);padding:10px 18px;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer}
+.btn-cancel-m:hover{border-color:var(--blue-500);color:var(--blue-700)}
+.btn-del{background:#fff;color:var(--st-cancel);border:1px solid #f3c4c4;padding:10px 18px;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer}
+.btn-del:hover{background:#fef2f2}
 
 /* ── Debug ── */
-.debug-box{margin-top:12px;background:#fff;border:1px solid #e5e5e2;border-radius:8px;padding:10px 14px;font-size:11px;color:#666;line-height:1.8;display:none}
-.loader{text-align:center;padding:40px;color:#aaa}
+.debug-box{margin-top:14px;background:var(--white);border:1px solid var(--line);border-radius:var(--radius);padding:12px 16px;font-size:11px;color:var(--ink-500);line-height:1.9;display:none;font-family:'Inter'}
+.loader{text-align:center;padding:44px;color:var(--ink-500)}
 </style>
 </head>
 <body>
@@ -129,17 +155,17 @@ td.slot.current-lead-slot{background:#EBF5FF}
 
   <div class="divider"></div>
 
-  <select id="mgr-filter" onchange="renderGrid();renderAnalytics()" style="font-size:12px;padding:5px 8px;border:1px solid #ddd;border-radius:6px;height:30px;max-width:160px">
+  <select id="mgr-filter" onchange="renderGrid();renderAnalytics()" style="font-size:12px;padding:7px 10px;border:1px solid var(--line);border-radius:9px;height:34px;max-width:170px;color:var(--ink-700)">
     <option value="">Все менеджеры</option>
   </select>
 
-  <select id="segment-filter" onchange="onSegmentFilterChange()" style="font-size:12px;padding:5px 8px;border:1px solid #ddd;border-radius:6px;height:30px;max-width:200px">
+  <select id="segment-filter" onchange="onSegmentFilterChange()" style="font-size:12px;padding:7px 10px;border:1px solid var(--line);border-radius:9px;height:34px;max-width:210px;color:var(--ink-700)">
     <option value="">Все сегменты</option>
   </select>
 
   <button class="btn-refresh" onclick="reloadAll()">↻ Обновить</button>
   <button class="btn-refresh" onclick="clearAllCache()" title="Полностью очистить локальный кэш и перезагрузить страницу">🧹 Очистить кэш</button>
-  <button class="btn-refresh" id="btn-bind" onclick="registerPlacements()" style="background:#185FA5;color:#fff;border-color:#185FA5">📎 Привязать к лидам/сделкам</button>
+  <button class="btn-refresh" id="btn-bind" onclick="registerPlacements()" style="background:var(--blue-700);color:#fff;border-color:var(--blue-700)">📎 Привязать к лидам/сделкам</button>
   <span class="status-bar" id="status">Инициализация...</span>
 </div>
 
@@ -150,12 +176,12 @@ td.slot.current-lead-slot{background:#EBF5FF}
   </div>
 
   <div class="legend">
-    <div class="leg"><div class="leg-dot" style="background:#888780"></div>Назначена (ТМ)</div>
-    <div class="leg"><div class="leg-dot" style="background:#185FA5"></div>Своя</div>
-    <div class="leg"><div class="leg-dot" style="background:#1D9E75"></div>Подтверждена</div>
-    <div class="leg"><div class="leg-dot" style="background:#3B6D11"></div>Проведена</div>
-    <div class="leg"><div class="leg-dot" style="background:#BA7517"></div>Перенесена</div>
-    <div class="leg"><div class="leg-dot" style="background:#c0392b"></div>Отмена</div>
+    <div class="leg"><div class="leg-dot" style="background:var(--st-assigned)"></div>Назначена (ТМ)</div>
+    <div class="leg"><div class="leg-dot" style="background:var(--st-own)"></div>Своя</div>
+    <div class="leg"><div class="leg-dot" style="background:var(--st-confirmed)"></div>Подтверждена</div>
+    <div class="leg"><div class="leg-dot" style="background:var(--st-done)"></div>Проведена</div>
+    <div class="leg"><div class="leg-dot" style="background:var(--st-moved)"></div>Перенесена</div>
+    <div class="leg"><div class="leg-dot" style="background:var(--st-cancel)"></div>Отмена</div>
   </div>
 
   <div class="section-title">
@@ -220,7 +246,7 @@ td.slot.current-lead-slot{background:#EBF5FF}
         <option value="17:00">17:00</option>
         <option value="18:00">18:00</option>
       </select>
-      <div id="dt-preview" style="margin-top:6px;font-size:12px;font-weight:600;color:#185FA5;background:#eaf3fb;border-radius:6px;padding:6px 9px">📅 —</div>
+      <div id="dt-preview" style="margin-top:7px;font-size:12px;font-weight:600;color:var(--blue-700);background:var(--blue-50);border-radius:9px;padding:8px 11px">📅 —</div>
     </div>
     <div class="field">
       <label>Источник назначения</label>
@@ -244,8 +270,11 @@ td.slot.current-lead-slot{background:#EBF5FF}
         <option value="cancel">Отмена</option>
       </select>
     </div>
-    <div id="lead-id-info" style="display:none;font-size:11px;color:#185FA5;padding:4px 0">
-      📎 Лид: <strong id="modal-lead-label"></strong>
+    <div id="lead-id-info" style="display:none;font-size:12px;color:var(--blue-700);padding:6px 0">
+      📎 <a id="modal-lead-link" href="javascript:void(0)" onclick="openEntityCard()" style="color:var(--blue-700);font-weight:600;text-decoration:underline;cursor:pointer"><span id="modal-lead-label"></span></a>
+    </div>
+    <div id="readonly-note" style="display:none;background:var(--blue-50);border-radius:9px;padding:8px 11px;font-size:12px;color:var(--ink-700);margin-top:4px">
+      🔒 Эта встреча назначена на другого менеджера — доступен только просмотр.
     </div>
 
     <div class="modal-btns">
@@ -338,6 +367,10 @@ const URL_PARAMS  = new URLSearchParams(window.location.search);
 let currentLeadId = URL_PARAMS.get('lead_id') || null;
 let currentDealId = URL_PARAMS.get('deal_id') || null;
 let autoJumpDone  = false; // дату шахматки под дату встречи лида переключаем только раз
+let currentUserId = '';    // ID текущего залогиненного пользователя (для прав)
+let currentUserIsAdmin = false; // админ видит/меняет всё
+let modalEntityId   = null;     // ID лида/сделки, открытого в модалке (для ссылки)
+let modalEntityType = 'lead';
 let currentDomain = URL_PARAMS.get('DOMAIN') || '';
 
 // Б24 передаёт PLACEMENT и PLACEMENT_OPTIONS через URL после нашего редиректа через Worker.
@@ -685,7 +718,7 @@ function onSegmentFilterChange() {
 // ════════════════════════════════════════════════
 async function loadEntries(from, to, force = false) {
   try {
-    const SELECT = ['ID','TITLE','STATUS_ID','ASSIGNED_BY_ID', F.manager, F.date, F.status, F.tm, F.product, F.segment];
+    const SELECT = ['ID','TITLE','STATUS_ID','ASSIGNED_BY_ID','CREATED_BY_ID', F.manager, F.date, F.status, F.tm, F.product, F.segment];
     const ORDER  = { [F.date]: 'ASC' };
     const cacheKey = 'sh_leads_' + from + '_' + to;
 
@@ -788,10 +821,13 @@ function mapLead(item) {
   return {
     id: String(item.ID), mgr: mgrId,
     date, slot, source, product,
-    tm     : String(item[F.tm] || ''),
-    client : String(item.TITLE || ''),
-    status : statusKey,
-    segment: String(item[F.segment] || ''), // ID значения списка UF_CRM_1730551844
+    tm       : String(item[F.tm] || ''),
+    client   : String(item.TITLE || ''),
+    status   : statusKey,
+    segment  : String(item[F.segment] || ''), // ID значения списка UF_CRM_1730551844
+    assigned : String(item.ASSIGNED_BY_ID || ''),  // ответственный лида
+    creator  : String(item.CREATED_BY_ID || ''),   // кто создал лид
+    entity   : 'lead',                              // тип сущности (лид/сделка)
   };
 }
 
@@ -799,6 +835,15 @@ function mapLead(item) {
 //  СОХРАНЕНИЕ
 // ════════════════════════════════════════════════
 async function saveEntry() {
+  // Защита прав: нельзя сохранять изменения чужой встречи.
+  if (editId) {
+    const existing = allEntries.find(x => x.id === editId);
+    if (existing && !canEditEntry(existing)) {
+      log('🔒 Попытка изменить чужую встречу #' + editId + ' заблокирована.');
+      alert('Эту встречу можно только просматривать — она назначена на другого менеджера.');
+      return;
+    }
+  }
   const btn = document.getElementById('btn-save');
   btn.disabled = true; btn.textContent = 'Сохранение...';
   try {
@@ -924,6 +969,11 @@ async function saveEntry() {
 }
 
 async function deleteEntry() {
+  const existing = allEntries.find(x => x.id === editId);
+  if (existing && !canEditEntry(existing)) {
+    alert('Эту встречу можно только просматривать — она назначена на другого менеджера.');
+    return;
+  }
   if (!confirm('Удалить встречу (лид)?')) return;
   try {
     await apiOne('crm.lead.delete', { id: parseInt(editId) });
@@ -1173,6 +1223,47 @@ function onSegmentChange() {
   }
 }
 
+// Можно ли редактировать встречу:
+//  - новую (нет entry) — всегда можно;
+//  - если не знаем текущего пользователя (BX24 не дал) — не ограничиваем;
+//  - админ — всё можно;
+//  - иначе: только если встреча на мне (menedжер/ответственный) ИЛИ я её создал.
+function canEditEntry(entry) {
+  if (!entry) return true;
+  if (!currentUserId) return true;      // нет данных о юзере → не блокируем
+  if (currentUserIsAdmin) return true;
+  const me = String(currentUserId);
+  return entry.mgr === me || entry.assigned === me || entry.creator === me;
+}
+
+// Включает/выключает поля модалки в зависимости от прав.
+function applyEditableState(editable) {
+  const ids = ['m-product','m-segment','m-mgr','m-date','m-time','m-source','m-tm','m-client','m-status'];
+  ids.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.disabled = !editable;
+  });
+  const save = document.getElementById('btn-save');
+  if (save) save.style.display = editable ? '' : 'none';
+  const note = document.getElementById('readonly-note');
+  if (note) note.style.display = editable ? 'none' : 'block';
+}
+
+// Открыть карточку лида/сделки в Б24 (из модалки).
+function openEntityCard() {
+  if (!modalEntityId) return;
+  const path = (modalEntityType === 'deal' ? '/crm/deal/details/' : '/crm/lead/details/') + modalEntityId + '/';
+  try {
+    if (typeof BX24 !== 'undefined' && BX24.openPath) {
+      BX24.openPath(path, function () {});
+      return;
+    }
+  } catch (e) { /* fallthrough */ }
+  // Фолбэк: открыть напрямую по домену портала
+  const domain = (typeof BX24 !== 'undefined' && BX24.getDomain) ? BX24.getDomain() : 'crm.seller24.ru';
+  window.open('https://' + domain + path, '_blank');
+}
+
 function openModal(id, mgrId, slot, date) {
   log('🖱️ openModal: id=' + id + ', mgr=' + mgrId + ', slot=' + slot + ', date=' + date);
   editId = id; modalMgr = mgrId; modalSlot = slot; modalDate = date;
@@ -1189,17 +1280,28 @@ function openModal(id, mgrId, slot, date) {
   updateDateTimePreview();
   document.getElementById('m-product').value  = currentProduct;
   document.getElementById('modal-title').textContent = id ? 'Редактировать встречу' : 'Новая встреча';
-  document.getElementById('btn-del').style.display = id ? 'block' : 'none';
 
-  // Показать инфо о лиде если есть контекст
+  // Показать инфо о лиде/сделке если есть контекст + сделать ссылку кликабельной
   const leadInfo = document.getElementById('lead-id-info');
   const activeLeadId = id || currentLeadId;
+  const e0 = id ? allEntries.find(x => x.id === id) : null;
+  const entityType = (e0 && e0.entity) || 'lead';
   if (activeLeadId) {
     leadInfo.style.display = 'block';
-    document.getElementById('modal-lead-label').textContent = 'Лид #' + activeLeadId;
+    modalEntityId = activeLeadId;
+    modalEntityType = entityType;
+    document.getElementById('modal-lead-label').textContent =
+      (entityType === 'deal' ? 'Сделка #' : 'Лид #') + activeLeadId + ' — открыть карточку';
   } else {
     leadInfo.style.display = 'none';
+    modalEntityId = null;
   }
+
+  // Права: чужую встречу можно только смотреть.
+  const editable = canEditEntry(e0);
+  applyEditableState(editable);
+
+  document.getElementById('btn-del').style.display = (id && editable) ? 'block' : 'none';
 
   if (id) {
     const e = allEntries.find(x => x.id === id);
@@ -1348,7 +1450,7 @@ function setStatus(msg, type='') {
   el.className   = 'status-bar' + (type ? ' '+type : '');
 }
 
-const BUILD_VERSION = 'shahmatka build 2026-07-02 #14 (cyrillic-letter-fix)';
+const BUILD_VERSION = 'shahmatka build 2026-07-02 #16 (permissions-and-link)';
 
 function log(msg) {
   const b = document.getElementById('debug-box');
@@ -1556,6 +1658,25 @@ async function checkPlacements() {
   }
   BX24.init(async function () {
     fitBX24Window();
+
+    // 0. Определяем текущего залогиненного пользователя (для прав на редактирование).
+    //    Через BX24 (OAuth-контекст), а не через вебхук — вебхук вернул бы владельца.
+    try {
+      BX24.callMethod('user.current', {}, function (res) {
+        if (!res.error()) {
+          const u = res.data();
+          currentUserId = String(u.ID || '');
+          currentUserIsAdmin = (u.ADMIN === true || u.ADMIN === 'Y');
+          log('👤 Текущий пользователь: ' + (u.NAME || '') + ' ' + (u.LAST_NAME || '') +
+              ' (id=' + currentUserId + ')' + (currentUserIsAdmin ? ' [админ]' : ''));
+        } else {
+          log('⚠️ user.current: ' + JSON.stringify(res.error()) + ' — редактирование чужих встреч не ограничивается.');
+        }
+      });
+    } catch (e) {
+      log('⚠️ user.current: ' + e.message);
+    }
+
     // 1. Определяем, из какой карточки открыта вкладка (лид/сделка),
     //    и подтягиваем нужный лид автоматически.
     try {
