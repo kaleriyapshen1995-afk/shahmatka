@@ -44,6 +44,12 @@ select{font-family:'Inter'}
 .status-bar{font-size:11px;color:var(--ink-500);margin-left:auto}
 .status-bar.error{color:var(--st-cancel);font-weight:600}.status-bar.loading{color:var(--blue-600)}
 
+/* ── Переключатель Шахматка/Отчёт (в тулбаре) ── */
+.view-switch{display:flex;gap:4px;background:var(--blue-50);padding:3px;border-radius:11px}
+.vs-btn{padding:6px 15px;border:1px solid transparent;border-radius:8px;background:transparent;font-family:'Manrope';font-size:12px;font-weight:700;color:var(--ink-500);cursor:pointer;transition:.15s}
+.vs-btn:hover{color:var(--blue-700)}
+.vs-btn.active{background:var(--blue-700);color:#fff;box-shadow:var(--shadow-sm)}
+
 /* ── Сетка ── */
 .main{padding:16px 20px}
 .grid-wrap{overflow-x:auto;border-radius:var(--radius);border:1px solid var(--line);background:var(--white);box-shadow:var(--shadow-sm)}
@@ -130,6 +136,13 @@ td.slot.current-lead-slot{background:var(--blue-100)}
 
   <div class="divider"></div>
 
+  <div class="view-switch" id="view-switch">
+    <button class="vs-btn active" id="vs-grid" onclick="setView('grid')">🗓️ Шахматка</button>
+    <button class="vs-btn" id="vs-report" onclick="setView('report')">📊 Отчёт</button>
+  </div>
+
+  <div class="divider"></div>
+
   <div class="tab-group" id="product-tabs">
     <button class="tab-btn product-btn active-acc" id="btn-acc" onclick="setProduct('accounting',this)">Аккаунтинг</button>
     <button class="tab-btn product-btn" id="btn-plat" onclick="setProduct('platform',this)">Платформа</button>
@@ -138,11 +151,11 @@ td.slot.current-lead-slot{background:var(--blue-100)}
   <div class="divider"></div>
 
   <div class="tab-group" id="period-tabs">
-    <button class="tab-btn active" onclick="setPeriod('day',this)">День</button>
-    <button class="tab-btn" onclick="setPeriod('week',this)">Неделя</button>
-    <button class="tab-btn" onclick="setPeriod('month',this)">Месяц</button>
-    <button class="tab-btn" onclick="setPeriod('quarter',this)">Квартал</button>
-    <button class="tab-btn" onclick="setPeriod('range',this)">Диапазон</button>
+    <button class="tab-btn active" data-period="day" onclick="setPeriod('day',this)">День</button>
+    <button class="tab-btn" data-period="week" onclick="setPeriod('week',this)">Неделя</button>
+    <button class="tab-btn" data-period="month" onclick="setPeriod('month',this)">Месяц</button>
+    <button class="tab-btn" data-period="quarter" onclick="setPeriod('quarter',this)">Квартал</button>
+    <button class="tab-btn" data-period="range" onclick="setPeriod('range',this)">Диапазон</button>
   </div>
 
   <input type="date" id="date-pick" onchange="onDateChange()">
@@ -170,40 +183,46 @@ td.slot.current-lead-slot{background:var(--blue-100)}
 </div>
 
 <div class="main">
-  <div class="grid-wrap">
-    <div id="grid-loader" class="loader">Загружаем данные из Б24...</div>
-    <table id="grid" style="display:none"></table>
+  <!-- ═══ ВКЛАДКА: ШАХМАТКА ═══ -->
+  <div id="view-grid">
+    <div class="grid-wrap">
+      <div id="grid-loader" class="loader">Загружаем данные из Б24...</div>
+      <table id="grid" style="display:none"></table>
+    </div>
+
+    <div class="legend">
+      <div class="leg"><div class="leg-dot" style="background:var(--st-assigned)"></div>Назначена (ТМ)</div>
+      <div class="leg"><div class="leg-dot" style="background:var(--st-own)"></div>Своя</div>
+      <div class="leg"><div class="leg-dot" style="background:var(--st-confirmed)"></div>Подтверждена</div>
+      <div class="leg"><div class="leg-dot" style="background:var(--st-done)"></div>Проведена</div>
+      <div class="leg"><div class="leg-dot" style="background:var(--st-moved)"></div>Перенесена</div>
+      <div class="leg"><div class="leg-dot" style="background:var(--st-cancel)"></div>Отмена</div>
+    </div>
   </div>
 
-  <div class="legend">
-    <div class="leg"><div class="leg-dot" style="background:var(--st-assigned)"></div>Назначена (ТМ)</div>
-    <div class="leg"><div class="leg-dot" style="background:var(--st-own)"></div>Своя</div>
-    <div class="leg"><div class="leg-dot" style="background:var(--st-confirmed)"></div>Подтверждена</div>
-    <div class="leg"><div class="leg-dot" style="background:var(--st-done)"></div>Проведена</div>
-    <div class="leg"><div class="leg-dot" style="background:var(--st-moved)"></div>Перенесена</div>
-    <div class="leg"><div class="leg-dot" style="background:var(--st-cancel)"></div>Отмена</div>
-  </div>
-
-  <div class="section-title">
-    Аналитика за период
-    <span class="product-badge" id="analytics-badge">Аккаунтинг</span>
-  </div>
-  <div class="analytics">
-    <table class="an-table">
-      <thead><tr>
-        <th>Менеджер ОП</th>
-        <th class="right">Назначено (ТМ)</th>
-        <th class="right">Назначено (ОП)</th>
-        <th class="right">Всего</th>
-        <th class="right">Проведено</th>
-        <th class="right">CR% ТМ</th>
-        <th class="right">CR% ОП</th>
-        <th class="right">CR% Общий</th>
-      </tr></thead>
-      <tbody id="analytics-body">
-        <tr><td colspan="8" style="text-align:center;color:#aaa;padding:16px">Загрузка...</td></tr>
-      </tbody>
-    </table>
+  <!-- ═══ ВКЛАДКА: ОТЧЁТ ═══ -->
+  <div id="view-report" style="display:none">
+    <div class="section-title">
+      Аналитика за период
+      <span class="product-badge" id="analytics-badge">Аккаунтинг</span>
+    </div>
+    <div class="analytics">
+      <table class="an-table">
+        <thead><tr>
+          <th>Менеджер ОП</th>
+          <th class="right" title="Назначили → Отменили → Перенесли → Провели">1. Отмена→Перенос→Провели</th>
+          <th class="right" title="Назначили → Отменили → Не провели">2. Отмена→Не провели</th>
+          <th class="right" title="Назначили → Провели">3. Назн→Провели</th>
+          <th class="right" title="Назначили → Перенесли → Провели">4. Перенос→Провели</th>
+          <th class="right" title="Назначили → Перенесли → Не провели">5. Перенос→Не провели</th>
+          <th class="right" title="Назначили повторно → Перенесли → Провели">6. Повтор→Перенос→Провели</th>
+          <th class="right">Всего</th>
+        </tr></thead>
+        <tbody id="analytics-body">
+          <tr><td colspan="8" style="text-align:center;color:#aaa;padding:16px">Загрузка...</td></tr>
+        </tbody>
+      </table>
+    </div>
   </div>
 
   <div class="debug-box" id="debug-box"></div>
@@ -300,6 +319,10 @@ const F = {
   client   : 'TITLE',               // название лида/сделки
   product  : 'UF_CRM_642D1C1B1609C', // продукт (держать)
   segment  : 'UF_CRM_1730551844',   // сегментация селлера (список, значения вида "A - 50 млн. и более")
+  // Журнал истории статусов встречи (создан в Б24 как UF_CRM_SH_LOG).
+  // Шахматка работает с лидами → используем лидовый код.
+  journal      : 'UF_CRM_1783542558',   // журнал в ЛИДАХ
+  journalDeal  : 'UF_CRM_1783543707',   // журнал в СДЕЛКАХ (на будущее)
 };
 
 // Пороги сегментов (буква → сравнение и сумма в рублях), по которым ищем
@@ -333,6 +356,83 @@ const STATUS_IDS = {
   moved     : '5304',
   done      : '5310',
 };
+
+// ════════════════════════════════════════════════
+//  ЖУРНАЛ СТАТУСОВ ВСТРЕЧИ + КЛАССИФИКАЦИЯ ДЛЯ ОТЧЁТА
+// ════════════════════════════════════════════════
+// Журнал хранится в поле F.journal. Формат строки: "ISODATE ключ".
+// Поле может быть "много значений" (массив строк) или одна строка с \n.
+// Ключи: assigned | confirmed | moved | done | cancel
+
+// Парсим значение поля-журнала в массив ключей статусов по порядку.
+function parseJournal(raw) {
+  let lines = [];
+  if (Array.isArray(raw)) lines = raw.map(String);
+  else if (raw) lines = String(raw).split(/\r?\n/);
+  return lines
+    .map(s => s.trim())
+    .filter(Boolean)
+    .map(s => {
+      const parts = s.split(/\s+/);
+      return parts[parts.length - 1]; // последний токен — ключ статуса
+    })
+    .filter(k => ['assigned','confirmed','moved','done','cancel'].includes(k));
+}
+
+// Дописываем новую запись в журнал, если статус реально изменился.
+// Возвращаем новое значение поля (массив — под "много значений").
+function appendJournal(raw, newStatusKey) {
+  let lines = [];
+  if (Array.isArray(raw)) lines = raw.map(String).filter(Boolean);
+  else if (raw) lines = String(raw).split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+
+  const keys = parseJournal(raw);
+  const last = keys[keys.length - 1];
+  // Не дублируем, если последний статус тот же (кроме assigned — повторное
+  // назначение важно фиксировать для п.6 "назначили повторно").
+  if (last === newStatusKey && newStatusKey !== 'assigned') return lines;
+
+  const stamp = new Date().toISOString().slice(0, 16); // YYYY-MM-DDTHH:MM
+  lines.push(stamp + ' ' + newStatusKey);
+  return lines;
+}
+
+// Классифицируем встречу в ОДНУ из 6 категорий по журналу.
+// Возвращаем ключ категории cat1..cat6 или '' (не подходит ни под одну).
+// Категории взаимоисключающие — правила проверяются сверху вниз.
+function classifyMeeting(journalRaw) {
+  const seq = parseJournal(journalRaw);
+  if (!seq.length) return '';
+  const has     = k => seq.includes(k);
+  const finalDone = seq[seq.length - 1] === 'done';
+  const assignedCount = seq.filter(k => k === 'assigned').length;
+  const hasCancel = has('cancel');
+  const hasMoved  = has('moved');
+
+  // 6) назначили ПОВТОРНО → перенесли → провели  (assigned ≥2, был перенос, финал провели)
+  if (assignedCount >= 2 && hasMoved && finalDone) return 'cat6';
+  // 1) назначили → отменили → перенесли → провели
+  if (hasCancel && hasMoved && finalDone) return 'cat1';
+  // 2) назначили → отменили → не провели
+  if (hasCancel && !finalDone) return 'cat2';
+  // 4) назначили → перенесли → провели (без отмены)
+  if (!hasCancel && hasMoved && finalDone) return 'cat4';
+  // 5) назначили → перенесли → не провели (без отмены)
+  if (!hasCancel && hasMoved && !finalDone) return 'cat5';
+  // 3) назначили → провели (без отмены и без переноса)
+  if (!hasCancel && !hasMoved && finalDone) return 'cat3';
+  return '';
+}
+
+const REPORT_CATS = [
+  { key:'cat1', label:'Назн→Отмена→Перенос→Провели' },
+  { key:'cat2', label:'Назн→Отмена→Не провели' },
+  { key:'cat3', label:'Назн→Провели' },
+  { key:'cat4', label:'Назн→Перенос→Провели' },
+  { key:'cat5', label:'Назн→Перенос→Не провели' },
+  { key:'cat6', label:'Назн.повторно→Перенос→Провели' },
+];
+
 
 const PRODUCT_IDS = {
   accounting : '1228',
@@ -718,7 +818,7 @@ function onSegmentFilterChange() {
 // ════════════════════════════════════════════════
 async function loadEntries(from, to, force = false) {
   try {
-    const SELECT = ['ID','TITLE','STATUS_ID','ASSIGNED_BY_ID','CREATED_BY_ID', F.manager, F.date, F.status, F.tm, F.product, F.segment];
+    const SELECT = ['ID','TITLE','STATUS_ID','ASSIGNED_BY_ID','CREATED_BY_ID', F.manager, F.date, F.status, F.tm, F.product, F.segment, F.journal];
     const ORDER  = { [F.date]: 'ASC' };
     const cacheKey = 'sh_leads_' + from + '_' + to;
 
@@ -828,6 +928,8 @@ function mapLead(item) {
     assigned : String(item.ASSIGNED_BY_ID || ''),  // ответственный лида
     creator  : String(item.CREATED_BY_ID || ''),   // кто создал лид
     entity   : 'lead',                              // тип сущности (лид/сделка)
+    journal  : item[F.journal] || '',               // сырой журнал статусов
+    category : classifyMeeting(item[F.journal] || ''), // cat1..cat6 или ''
   };
 }
 
@@ -877,6 +979,26 @@ async function saveEntry() {
     };
     // ВАЖНО: ASSIGNED_BY_ID (ответственный лида) намеренно НЕ включаем в fields —
     // ответственный должен оставаться прежним. Менеджер встречи хранится в F.manager.
+
+    // ── Журнал статусов: дописываем текущий статус в историю встречи ──
+    // Берём прежний журнал из уже загруженной встречи (если это редактирование)
+    // или из привязанного лида, затем добавляем новую запись при изменении.
+    try {
+      const targetId = editId || currentLeadId;
+      let prevJournal = '';
+      if (targetId) {
+        const ex = allEntries.find(x => x.id === String(targetId));
+        if (ex && ex.journal) prevJournal = ex.journal;
+        else {
+          // подстрахуемся — читаем из Б24
+          const cur = await apiOne('crm.lead.get', { id: parseInt(targetId) });
+          prevJournal = (cur && cur[F.journal]) || '';
+        }
+      }
+      fields[F.journal] = appendJournal(prevJournal, skey);
+    } catch (e) {
+      log('⚠️ Журнал статусов: ' + e.message);
+    }
 
     let savedLeadId = null;
     if (editId) {
@@ -1151,42 +1273,32 @@ function renderAnalytics() {
   const entries = allEntries.filter(e => e.product === currentProduct && ds.includes(e.date));
 
   let html = '';
-  let totTM=0,totOwn=0,totAll=0,totDone=0,totDoneTM=0,totDoneOwn=0;
+  const totals = { cat1:0, cat2:0, cat3:0, cat4:0, cat5:0, cat6:0, all:0 };
 
   mgrList.forEach(mgr => {
-    const es    = entries.filter(e => e.mgr === mgr.id);
-    const esTM  = es.filter(e => e.source === 'tm');
-    const esOwn = es.filter(e => e.source === 'own');
-    const tm    = esTM.length, own = esOwn.length, total = tm + own;
-    const done     = es.filter(e => e.status === 'done').length;
-    const doneTM   = esTM.filter(e => e.status === 'done').length;
-    const doneOwn  = esOwn.filter(e => e.status === 'done').length;
-    const crTM  = tm    > 0 ? Math.round(doneTM  / tm    * 100) : -1;
-    const crOwn = own   > 0 ? Math.round(doneOwn / own   * 100) : -1;
-    const crAll = total > 0 ? Math.round(done    / total * 100) : -1;
+    const es = entries.filter(e => e.mgr === mgr.id);
+    const c  = { cat1:0, cat2:0, cat3:0, cat4:0, cat5:0, cat6:0 };
+    es.forEach(e => { if (e.category && c[e.category] !== undefined) c[e.category]++; });
+    const rowAll = c.cat1 + c.cat2 + c.cat3 + c.cat4 + c.cat5 + c.cat6;
 
-    totTM+=tm; totOwn+=own; totAll+=total;
-    totDone+=done; totDoneTM+=doneTM; totDoneOwn+=doneOwn;
+    REPORT_CATS.forEach(rc => { totals[rc.key] += c[rc.key]; });
+    totals.all += rowAll;
 
     html += `<tr>
       <td>${mgr.name}</td>
-      <td class="right">${tm}</td><td class="right">${own}</td>
-      <td class="right">${total}</td><td class="right">${done}</td>
-      ${crCell(crTM)}${crCell(crOwn)}${crCell(crAll)}
+      ${REPORT_CATS.map(rc => `<td class="right">${c[rc.key]}</td>`).join('')}
+      <td class="right"><b>${rowAll}</b></td>
     </tr>`;
   });
 
-  const totCRtm  = totTM   > 0 ? Math.round(totDoneTM  / totTM   * 100) : -1;
-  const totCRown = totOwn  > 0 ? Math.round(totDoneOwn / totOwn  * 100) : -1;
-  const totCRall = totAll  > 0 ? Math.round(totDone    / totAll  * 100) : -1;
   html += `<tr class="total-row">
     <td>Итого</td>
-    <td class="right">${totTM}</td><td class="right">${totOwn}</td>
-    <td class="right">${totAll}</td><td class="right">${totDone}</td>
-    ${crCell(totCRtm)}${crCell(totCRown)}${crCell(totCRall)}
+    ${REPORT_CATS.map(rc => `<td class="right">${totals[rc.key]}</td>`).join('')}
+    <td class="right">${totals.all}</td>
   </tr>`;
 
-  if (!mgrList.length) html = '<tr><td colspan="8" style="text-align:center;color:#aaa;padding:16px">Нет данных</td></tr>';
+  const cols = REPORT_CATS.length + 2;
+  if (!mgrList.length) html = `<tr><td colspan="${cols}" style="text-align:center;color:#aaa;padding:16px">Нет данных</td></tr>`;
   document.getElementById('analytics-body').innerHTML = html;
 
   // Дадим DOM отрисоваться, затем растянем iframe под высоту содержимого
@@ -1398,6 +1510,30 @@ document.getElementById('modal-bg').addEventListener('click', e => {
 // ════════════════════════════════════════════════
 //  ПЕРЕКЛЮЧАТЕЛИ
 // ════════════════════════════════════════════════
+let currentView = 'grid'; // 'grid' | 'report'
+
+function setView(v) {
+  currentView = v;
+  document.getElementById('view-grid').style.display   = v === 'grid'   ? '' : 'none';
+  document.getElementById('view-report').style.display = v === 'report' ? '' : 'none';
+  document.getElementById('vs-grid').classList.toggle('active',   v === 'grid');
+  document.getElementById('vs-report').classList.toggle('active', v === 'report');
+
+  // В "Шахматке" нет квартала — прячем кнопку. В "Отчёте" — показываем.
+  const qBtn = document.querySelector('#period-tabs [data-period="quarter"]');
+  if (qBtn) qBtn.style.display = (v === 'grid') ? 'none' : '';
+
+  // Если переключились на Шахматку, а был выбран Квартал — откатываем на Месяц.
+  if (v === 'grid' && period === 'quarter') {
+    const mBtn = document.querySelector('#period-tabs [data-period="month"]');
+    if (mBtn) setPeriod('month', mBtn);
+  }
+
+  // Перерисовываем активный раздел и подгоняем высоту iframe
+  if (v === 'grid') renderGrid(); else renderAnalytics();
+  setTimeout(fitBX24Window, 60);
+}
+
 function setProduct(prod) {
   currentProduct = prod;
   document.getElementById('btn-acc').className  = 'tab-btn product-btn' + (prod==='accounting'?' active-acc':'');
@@ -1450,7 +1586,7 @@ function setStatus(msg, type='') {
   el.className   = 'status-bar' + (type ? ' '+type : '');
 }
 
-const BUILD_VERSION = 'shahmatka build 2026-07-02 #16 (permissions-and-link)';
+const BUILD_VERSION = 'shahmatka build 2026-07-03 #20 (journal-field-set)';
 
 function log(msg) {
   const b = document.getElementById('debug-box');
@@ -1931,6 +2067,7 @@ function clearAllCache() {
 
 checkPlacements();
 log('🔧 ' + BUILD_VERSION);
+setView('grid'); // стартуем на Шахматке; прячем Квартал
 Promise.all([loadSegmentField(), loadSegmentDepartments()]).then(() => {
   // Данные о сегментах/отделах могли подгрузиться уже после первого рендера сетки —
   // перерисовываем, чтобы фильтр по сегменту (если он выставлен) применился.
