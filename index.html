@@ -1089,6 +1089,13 @@ async function saveEntry() {
     const product = document.getElementById('m-product').value;
     const segVal  = document.getElementById('m-segment').value;
 
+    // Без сегментации селлера встречу назначить нельзя.
+    if (!segVal) {
+      alert('Укажите сегментацию селлера — без сегмента встречу назначить нельзя.');
+      btn.disabled = false; btn.textContent = 'Сохранить';
+      return;
+    }
+
     const productVal = PRODUCT_IDS[product] || '';
 
     // Поле статуса — одиночное (enumeration), пишем один ID значения.
@@ -1336,6 +1343,8 @@ function renderGrid() {
       }
     });
   }
+  // Тест-менеджеры показываем всегда (независимо от фильтров).
+  EXTRA_MANAGERS.forEach(x => { if (!mgrList.find(m => m.id === x.id)) mgrList.push(x); });
 
   let html = '<thead><tr><th class="mgr-h">Менеджер ОП</th>';
   if (period === 'day') {
@@ -1545,9 +1554,9 @@ function renderAnalytics() {
   const abadge = document.getElementById('analytics-badge');
   if (abadge) { abadge.textContent = 'Все продукты'; abadge.className = 'product-badge'; abadge.style.background = 'var(--ink-500)'; }
 
-  // Данные по группам (колонки)
+  // Данные по группам (колонки). Показываем ВСЕ группы — все сегменты/источники/ТМ,
+  // даже пустые (с нулями), чтобы был виден полный список.
   let cols = groups.map(g => ({ name: g.name, c: countGroup(entries.filter(g.filter)) }));
-  if (reportBreakdown !== 'mgr') cols = cols.filter(col => col.c.total > 0); // в разрезах прячем пустые
 
   // Итог по всем группам
   const T = sumCounters(cols.map(col => col.c));
@@ -2248,7 +2257,7 @@ function setStatus(msg, type='') {
   el.className   = 'status-bar' + (type ? ' '+type : '');
 }
 
-const BUILD_VERSION = 'shahmatka build 2026-07-29 #37 (тест-менеджер ID 5 в сетке)';
+const BUILD_VERSION = 'shahmatka build 2026-07-29 #38 (ID5 всегда в сетке; все сегменты/источники в отчёте; сегмент обязателен)';
 
 function log(msg) {
   const b = document.getElementById('debug-box');
