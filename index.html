@@ -344,10 +344,9 @@ td.slot.current-lead-slot{background:var(--blue-100)}
     <h3 id="modal-title">Новая встреча</h3>
 
     <div class="field">
-      <label>Продукт</label>
-      <select id="m-product">
-        <option value="accounting">Аккаунтинг</option>
-        <option value="platform">Платформа</option>
+      <label>Статус ТМ квалификации лида в сделку</label>
+      <select id="m-tmqual">
+        <option value="">— не указан —</option>
       </select>
     </div>
     <div class="field">
@@ -418,6 +417,7 @@ const F = {
   assigned : 'ASSIGNED_BY_ID',      // ответственный лида — оставляем как есть, не перезаписываем
   client   : 'TITLE',               // название лида/сделки
   product  : 'UF_CRM_642D1C1B1609C', // продукт (держать)
+  tmqual   : 'UF_CRM_1721715916',   // статус ТМ квалификации лида (список, множественный)
   segment  : 'UF_CRM_1730551844',   // сегментация селлера (список, значения вида "A - 50 млн. и более")
   // Журнал истории статусов встречи (создан в Б24 как UF_CRM_SH_LOG).
   // Шахматка работает с лидами → используем лидовый код.
@@ -532,6 +532,7 @@ let segmentIdToLetter = {};   // id значения поля → буква (A/
 let segmentDeptIds    = {};   // буква сегмента → ID отдела в Б24
 let segmentManagers   = {};   // буква сегмента → [{id,name}] менеджеры этого отдела
 let activeSegmentId   = '';   // текущий выбранный сегмент в тулбаре (фильтр по всей сетке)
+let tmqualItems       = [];   // [{id,label}] — значения поля "Статус ТМ квалификации" (UF_CRM_1721715916)
 
 // Контекст — из URL-параметров (передаётся при открытии из карточки лида/сделки)
 const URL_PARAMS  = new URLSearchParams(window.location.search);
@@ -721,6 +722,13 @@ async function loadSegmentField(force = false) {
     // ── Статус встречи ──
     resolveStatusIds(fields);
 
+    // ── Статус ТМ квалификации лида (UF_CRM_1721715916) ──
+    const tqDef = fields && fields[F.tmqual];
+    tmqualItems = (tqDef && Array.isArray(tqDef.items))
+      ? tqDef.items.map(it => ({ id: String(it.ID), label: String(it.VALUE || '') }))
+      : [];
+    if (tmqualItems.length) log('🏷️ Статусы ТМ квалификации: ' + tmqualItems.length + ' значений');
+
     // ── Сегментация ──
     const fieldDef = fields && fields[F.segment];
     if (!fieldDef || !Array.isArray(fieldDef.items)) {
@@ -890,7 +898,7 @@ function onSegmentFilterChange() {
 // ════════════════════════════════════════════════
 async function loadEntries(from, to, force = false) {
   try {
-    const SELECT = ['ID','TITLE','STATUS_ID','ASSIGNED_BY_ID','CREATED_BY_ID', F.manager, F.date, F.status, F.tm, F.product, F.segment, F.journal, F.calId];
+    const SELECT = ['ID','TITLE','STATUS_ID','ASSIGNED_BY_ID','CREATED_BY_ID', F.manager, F.date, F.status, F.tm, F.product, F.tmqual, F.segment, F.journal, F.calId];
     const ORDER  = { [F.date]: 'ASC' };
     const cacheKey = 'sh_leads_' + from + '_' + to;
 
@@ -1018,6 +1026,8 @@ function mapLead(item) {
     entity   : 'lead',                              // тип сущности (лид/сделка)
     journal  : item[F.journal] || '',               // сырой журнал статусов
     calId    : String(item[F.calId] || ''),         // ID события календаря
+    tmqual   : Array.isArray(item[F.tmqual]) ? item[F.tmqual].map(String)
+               : (item[F.tmqual] ? [String(item[F.tmqual])] : []),   // статус ТМ квалификации
   };
 }
 
@@ -1086,7 +1096,8 @@ async function saveEntry() {
     const tmId    = document.getElementById('m-tm').value;
     const client  = document.getElementById('m-client').value;
     const skey    = document.getElementById('m-status').value;
-    const product = document.getElementById('m-product').value;
+    const product = currentProduct;   // продукт берём от верхней вкладки (в модалке поля нет)
+    const tmqualVal = document.getElementById('m-tmqual').value;
     const segVal  = document.getElementById('m-segment').value;
 
     // Без сегментации селлера встречу назначить нельзя.
@@ -1108,6 +1119,7 @@ async function saveEntry() {
       [F.tm]         : source === 'tm' ? (parseInt(tmId) || null) : null,
       [F.status]     : statusId,
       [F.product]    : productVal,
+      [F.tmqual]     : tmqualVal ? [tmqualVal] : [],
       [F.segment]    : segVal || null,
     };
     // ВАЖНО: ASSIGNED_BY_ID (ответственный лида) намеренно НЕ включаем — он остаётся прежним.
@@ -2020,7 +2032,7 @@ function canEditEntry(entry) {
 }
 
 function applyEditableState(editable) {
-  const ids = ['m-product','m-segment','m-mgr','m-date','m-time','m-source','m-tm','m-client','m-status'];
+  const ids = ['m-tmqual','m-segment','m-mgr','m-date','m-time','m-source','m-tm','m-client','m-status'];
   ids.forEach(id => {
     const el = document.getElementById(id);
     if (el) el.disabled = !editable;
@@ -2054,12 +2066,13 @@ function openModal(id, mgrId, slot, date) {
   ).join('');
   document.getElementById('m-segment').innerHTML = '<option value="">— не указана —</option>' +
     segmentFieldItems.map(i => `<option value="${i.id}">${i.label}</option>`).join('');
+  document.getElementById('m-tmqual').innerHTML = '<option value="">— не указан —</option>' +
+    tmqualItems.map(i => `<option value="${i.id}">${escapeHtml(i.label)}</option>`).join('');
 
   const _pad = t => { const p = String(t || '9:00').split(':'); return String(p[0]).padStart(2,'0') + ':' + String(p[1] || '00').padStart(2,'0'); };
   document.getElementById('m-date').value = date;
   document.getElementById('m-time').value = _pad(slot);
   updateDateTimePreview();
-  document.getElementById('m-product').value  = currentProduct;
   document.getElementById('modal-title').textContent = id ? 'Редактировать встречу' : 'Новая встреча';
 
   const leadInfo = document.getElementById('lead-id-info');
@@ -2088,7 +2101,7 @@ function openModal(id, mgrId, slot, date) {
       document.getElementById('m-source').value  = e.source === 'own' ? 'own' : 'tm';
       document.getElementById('m-client').value  = e.client || '';
       document.getElementById('m-status').value  = e.status || 'assigned';
-      document.getElementById('m-product').value = e.product || 'accounting';
+      document.getElementById('m-tmqual').value  = (e.tmqual && e.tmqual[0]) || '';
       if (e.time) document.getElementById('m-time').value = _pad(e.time);
       if (e.tm) document.getElementById('m-tm').value = e.tm;
       document.getElementById('m-segment').value = e.segment || '';
@@ -2109,6 +2122,13 @@ function openModal(id, mgrId, slot, date) {
             document.getElementById('m-segment').value = String(lead[F.segment]);
             onSegmentChange();
             log('🏷️ Сегмент лида #' + currentLeadId + ' подтянут автоматически');
+          }
+          // Авто-подстановка статуса ТМ квалификации из лида
+          const tq = lead && lead[F.tmqual];
+          const tqId = Array.isArray(tq) ? (tq[0] != null ? String(tq[0]) : '') : (tq ? String(tq) : '');
+          if (tqId) {
+            document.getElementById('m-tmqual').value = tqId;
+            log('🏷️ Статус ТМ квалификации лида #' + currentLeadId + ' подтянут автоматически');
           }
         })
         .catch(e => log('⚠️ crm.lead.get (modal): ' + e.message));
@@ -2257,7 +2277,7 @@ function setStatus(msg, type='') {
   el.className   = 'status-bar' + (type ? ' '+type : '');
 }
 
-const BUILD_VERSION = 'shahmatka build 2026-07-29 #38 (ID5 всегда в сетке; все сегменты/источники в отчёте; сегмент обязателен)';
+const BUILD_VERSION = 'shahmatka build 2026-07-29 #39 (поле «Статус ТМ квалификации» вместо продукта + автоподстановка)';
 
 function log(msg) {
   const b = document.getElementById('debug-box');
