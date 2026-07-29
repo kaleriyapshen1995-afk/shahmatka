@@ -1038,12 +1038,57 @@ function fmtCalDT(d) {
   const p = n => String(n).padStart(2, '0');
   return d.getFullYear() + '-' + p(d.getMonth()+1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes()) + ':00';
 }
-// Создаём/обновляем событие в календаре выбранного менеджера.
-// Требует у вебхука право "Календарь (calendar)". Без него — тихий лог.
+// ISO-время для CRM-дел: YYYY-MM-DDTHH:MM:SS
+function fmtActDT(d) {
+  const p = n => String(n).padStart(2, '0');
+  return d.getFullYear() + '-' + p(d.getMonth()+1) + '-' + p(d.getDate()) + 'T' + p(d.getHours()) + ':' + p(d.getMinutes()) + ':00';
+}
+
+// Запасной вариант, когда у вебхука нет права «Календарь»:
+// создаём/обновляем CRM-дело «Встреча», привязанное к лиду. Требует только право crm.
+// Отображается у менеджера в планировщике и в таймлайне лида.
+async function syncActivity(leadId, mgrId, start, title, existingCalId) {
+  const end = new Date(start.getTime() + 60 * 60 * 1000);
+  const fields = {
+    OWNER_TYPE_ID: 1,                 // 1 = лид
+    OWNER_ID: parseInt(leadId),
+    TYPE_ID: 1,                       // 1 = встреча
+    SUBJECT: title || 'Встреча',
+    START_TIME: fmtActDT(start),
+    END_TIME: fmtActDT(end),
+    RESPONSIBLE_ID: parseInt(mgrId),
+    COMPLETED: 'N',
+    PRIORITY: 2,
+    DESCRIPTION: 'Встреча из шахматки. Лид #' + leadId,
+    COMMUNICATIONS: [{ ENTITY_ID: parseInt(leadId), ENTITY_TYPE_ID: 1 }],
+  };
+  const actId = (existingCalId && String(existingCalId).indexOf('act:') === 0)
+    ? String(existingCalId).slice(4) : '';
+  if (actId) {
+    await apiOne('crm.activity.update', { id: parseInt(actId), fields });
+    log('🗓️ Дело «Встреча» обновлено (#' + actId + ') у менеджера ' + mgrId);
+    return 'act:' + actId;
+  }
+  const newId = await apiOne('crm.activity.add', { fields });
+  try { await apiOne('crm.lead.update', { id: parseInt(leadId), fields: { [F.calId]: 'act:' + newId } }); } catch (e) {}
+  log('🗓️ Дело «Встреча» создано (#' + newId + ') у менеджера ' + mgrId);
+  return 'act:' + newId;
+}
+
+// Создаём/обновляем встречу у менеджера.
+// Сначала пробуем настоящий календарь (право «Календарь»), при отсутствии прав —
+// запасной вариант через CRM-дело «Встреча» (право crm, есть всегда).
 async function syncCalendar(leadId, mgrId, dtVal, title, existingCalId) {
   if (!mgrId || !dtVal) return existingCalId || '';
   const start = new Date(dtVal);
   if (isNaN(start)) return existingCalId || '';
+
+  // Если ранее уже создали CRM-дело — продолжаем работать с делом.
+  if (existingCalId && String(existingCalId).indexOf('act:') === 0) {
+    try { return await syncActivity(leadId, mgrId, start, title, existingCalId); }
+    catch (e) { log('⚠️ Не удалось обновить дело «Встреча»: ' + e.message); return existingCalId; }
+  }
+
   const params = {
     type: 'user', ownerId: parseInt(mgrId),
     name: title || 'Встреча',
@@ -1060,14 +1105,19 @@ async function syncCalendar(leadId, mgrId, dtVal, title, existingCalId) {
       await apiOne('calendar.event.update', { id: parseInt(existingCalId), ...params });
       log('📅 Событие календаря обновлено (#' + existingCalId + ') у менеджера ' + mgrId);
       return existingCalId;
-    } else {
-      const evId = await apiOne('calendar.event.add', params);
-      try { await apiOne('crm.lead.update', { id: parseInt(leadId), fields: { [F.calId]: String(evId) } }); } catch (e) {}
-      log('📅 Событие календаря создано (#' + evId + ') у менеджера ' + mgrId);
-      return String(evId);
     }
+    const evId = await apiOne('calendar.event.add', params);
+    try { await apiOne('crm.lead.update', { id: parseInt(leadId), fields: { [F.calId]: String(evId) } }); } catch (e) {}
+    log('📅 Событие календаря создано (#' + evId + ') у менеджера ' + mgrId);
+    return String(evId);
   } catch (e) {
-    log('⚠️ Календарь недоступен (' + e.message + '). Добавьте вебхуку право «Календарь (calendar)», чтобы встречи ставились в календарь менеджера.');
+    // Нет права «Календарь» — уходим в запасной вариант (CRM-дело).
+    if (/scope/i.test(e.message) || /401/.test(e.message)) {
+      log('ℹ️ Нет права «Календарь» — ставлю встречу как CRM-дело (запасной вариант).');
+      try { return await syncActivity(leadId, mgrId, start, title, existingCalId); }
+      catch (e2) { log('⚠️ Запасной вариант тоже не сработал: ' + e2.message); return existingCalId || ''; }
+    }
+    log('⚠️ Календарь недоступен (' + e.message + ').');
     return existingCalId || '';
   }
 }
@@ -2277,7 +2327,7 @@ function setStatus(msg, type='') {
   el.className   = 'status-bar' + (type ? ' '+type : '');
 }
 
-const BUILD_VERSION = 'shahmatka build 2026-07-29 #39 (поле «Статус ТМ квалификации» вместо продукта + автоподстановка)';
+const BUILD_VERSION = 'shahmatka build 2026-07-30 #40 (встреча в календарь; при отсутствии права — запасной вариант через CRM-дело)';
 
 function log(msg) {
   const b = document.getElementById('debug-box');
