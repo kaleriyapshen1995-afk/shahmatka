@@ -18,44 +18,52 @@
   /* Статусы встреч */
   --st-assigned:#8a94a3; --st-confirmed:#0ea5a0; --st-done:#16a34a;
   --st-moved:#d97706; --st-cancel:#dc2626; --st-own:var(--blue-600);
+  --st-giventm:#7c3aed;
   --radius:14px; --radius-sm:10px;
   --shadow:0 8px 30px rgba(29,78,216,.08);
   --shadow-sm:0 2px 10px rgba(29,78,216,.06);
+  /* Navy-палитра дашборда «Декомпозиция ОП» */
+  --navy-900:#14263f; --navy-800:#1c3560; --navy-700:#26467d; --navy-600:#2f5296;
+  --primary:#2f5fd0; --primary-600:#2a55bd;
+  --pill-green-bg:#e7f7ed; --pill-green:#1a9e4b;
+  --pill-red-bg:#fdecec; --pill-red:#e0483d;
 }
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Inter',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--ink-700);font-size:13px;font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
 h1,h2,h3,h4,strong,.mgr-cell{font-family:'Manrope','Inter',system-ui,sans-serif}
 
 /* ── Топбар ── */
-.topbar{background:var(--white);border-bottom:1px solid var(--line);padding:12px 20px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;position:sticky;top:0;z-index:10;box-shadow:var(--shadow-sm)}
-.topbar strong{font-size:16px;font-weight:800;color:var(--ink-900);letter-spacing:-.01em}
-.divider{width:1px;height:22px;background:var(--line)}
-.tab-group{display:flex;gap:4px;background:var(--blue-50);padding:3px;border-radius:11px}
-.tab-btn{padding:6px 15px;border:1px solid transparent;border-radius:8px;background:transparent;font-size:12px;font-weight:600;cursor:pointer;color:var(--ink-500);transition:all .15s}
-.tab-btn:hover{color:var(--blue-700)}
-.tab-btn.active{background:var(--white);color:var(--ink-900);box-shadow:var(--shadow-sm)}
-.tab-btn.product-btn.active-acc{background:var(--blue-600);border-color:var(--blue-600);color:#fff}
+.topbar{background:var(--navy-800);border-bottom:none;padding:14px 20px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;position:sticky;top:0;z-index:10;box-shadow:0 2px 14px rgba(20,38,63,.22)}
+.topbar strong{font-size:18px;font-weight:800;color:#fff;letter-spacing:-.01em}
+.divider{width:1px;height:22px;background:rgba(255,255,255,.18)}
+.tab-group{display:flex;gap:4px;background:rgba(255,255,255,.10);padding:3px;border-radius:11px}
+.tab-btn{padding:6px 15px;border:1px solid transparent;border-radius:8px;background:transparent;font-size:12px;font-weight:600;cursor:pointer;color:rgba(255,255,255,.72);transition:all .15s}
+.tab-btn:hover{color:#fff}
+.tab-btn.active{background:#fff;color:var(--navy-900);box-shadow:var(--shadow-sm)}
+.tab-btn.product-btn.active-acc{background:var(--primary);border-color:var(--primary);color:#fff}
 .tab-btn.product-btn.active-plat{background:var(--violet);border-color:var(--violet);color:#fff}
-input[type=date]{font-family:'Inter';font-size:12px;padding:7px 10px;border:1px solid var(--line);border-radius:9px;height:34px;color:var(--ink-700)}
-input[type=date]:focus{outline:none;border-color:var(--blue-500);box-shadow:0 0 0 3px var(--blue-100)}
+input[type=date]{font-family:'Inter';font-size:12px;padding:7px 10px;border:1px solid transparent;border-radius:9px;height:34px;color:var(--ink-900);background:#fff}
+input[type=date]:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(47,95,208,.3)}
 select{font-family:'Inter'}
-.btn-refresh{padding:7px 14px;border:1px solid var(--line);border-radius:9px;background:var(--white);font-size:12px;font-weight:600;color:var(--ink-700);cursor:pointer;transition:.15s}
-.btn-refresh:hover{border-color:var(--blue-500);color:var(--blue-700);box-shadow:var(--shadow-sm)}
-.status-bar{font-size:11px;color:var(--ink-500);margin-left:auto}
-.status-bar.error{color:var(--st-cancel);font-weight:600}.status-bar.loading{color:var(--blue-600)}
+.btn-refresh{padding:7px 14px;border:1px solid transparent;border-radius:9px;background:#fff;font-size:12px;font-weight:600;color:var(--navy-800);cursor:pointer;transition:.15s}
+.btn-refresh:hover{box-shadow:0 2px 10px rgba(20,38,63,.25)}
+.btn-primary{background:var(--primary)!important;color:#fff!important;border-color:var(--primary)!important}
+.btn-primary:hover{background:var(--primary-600)!important}
+.status-bar{font-size:11px;color:rgba(255,255,255,.8);margin-left:auto}
+.status-bar.error{color:#ffb4ac;font-weight:600}.status-bar.loading{color:#bcd3fb}
 
 /* ── Переключатель Шахматка/Отчёт (в тулбаре) ── */
-.view-switch{display:flex;gap:4px;background:var(--blue-50);padding:3px;border-radius:11px}
-.vs-btn{padding:6px 15px;border:1px solid transparent;border-radius:8px;background:transparent;font-family:'Manrope';font-size:12px;font-weight:700;color:var(--ink-500);cursor:pointer;transition:.15s}
-.vs-btn:hover{color:var(--blue-700)}
-.vs-btn.active{background:var(--blue-700);color:#fff;box-shadow:var(--shadow-sm)}
+.view-switch{display:flex;gap:4px;background:rgba(255,255,255,.10);padding:3px;border-radius:11px}
+.vs-btn{padding:6px 15px;border:1px solid transparent;border-radius:8px;background:transparent;font-family:'Manrope';font-size:12px;font-weight:700;color:rgba(255,255,255,.72);cursor:pointer;transition:.15s}
+.vs-btn:hover{color:#fff}
+.vs-btn.active{background:#fff;color:var(--navy-900);box-shadow:var(--shadow-sm)}
 
 /* ── Сетка ── */
 .main{padding:16px 20px}
 .grid-wrap{overflow-x:auto;border-radius:var(--radius);border:1px solid var(--line);background:var(--white);box-shadow:var(--shadow-sm)}
 table{border-collapse:collapse;min-width:100%}
-thead th{background:var(--blue-50);font-weight:600;font-size:11px;color:var(--ink-500);padding:10px 6px;white-space:nowrap;border-bottom:1px solid var(--line);border-right:1px solid var(--line);text-align:center;letter-spacing:.02em}
-thead th.mgr-h{text-align:left;min-width:150px;position:sticky;left:0;z-index:3;background:var(--blue-50);font-family:'Manrope';font-weight:700;color:var(--ink-900)}
+thead th{background:var(--navy-800);font-weight:600;font-size:11px;color:rgba(255,255,255,.82);padding:10px 6px;white-space:nowrap;border-bottom:1px solid rgba(255,255,255,.10);border-right:1px solid rgba(255,255,255,.08);text-align:center;letter-spacing:.02em}
+thead th.mgr-h{text-align:left;min-width:150px;position:sticky;left:0;z-index:3;background:var(--navy-800);font-family:'Manrope';font-weight:700;color:#fff}
 td.mgr-cell{background:var(--white);font-size:12px;font-weight:600;color:var(--ink-900);padding:9px 14px;border-bottom:1px solid var(--line);border-right:1px solid var(--line);white-space:nowrap;position:sticky;left:0;z-index:1;min-width:150px}
 tbody tr:hover td.mgr-cell{background:var(--blue-50)}
 td.slot{width:82px;min-width:82px;height:46px;border-bottom:1px solid var(--line);border-right:1px solid var(--line);vertical-align:middle;text-align:center;cursor:pointer;transition:background .12s}
@@ -68,6 +76,7 @@ td.slot.current-lead-slot{background:var(--blue-100)}
 .s-moved{background:var(--st-moved)}
 .s-cancel{background:var(--st-cancel)}
 .s-own{background:var(--st-own)}
+.s-giventm{background:var(--st-giventm)}
 
 /* ── Легенда ── */
 .legend{display:flex;gap:14px;flex-wrap:wrap;margin:14px 2px}
@@ -75,19 +84,80 @@ td.slot.current-lead-slot{background:var(--blue-100)}
 .leg-dot{width:11px;height:11px;border-radius:3px;flex-shrink:0}
 
 /* ── Аналитика ── */
-.section-title{font-family:'Manrope';font-size:15px;font-weight:800;color:var(--ink-900);margin-bottom:10px;margin-top:22px;display:flex;align-items:center;gap:8px}
+.section-title{font-family:'Manrope';font-size:18px;font-weight:800;color:var(--navy-900);margin-bottom:10px;margin-top:22px;display:flex;align-items:center;gap:8px}
 .product-badge{font-size:11px;font-weight:600;padding:3px 12px;border-radius:999px;color:#fff}
 .badge-acc{background:var(--blue-600)}
 .badge-plat{background:var(--violet)}
 .analytics{background:var(--white);border-radius:var(--radius);border:1px solid var(--line);overflow:hidden;box-shadow:var(--shadow-sm)}
+.an-scroll{overflow-x:auto}
 .an-table{width:100%;border-collapse:collapse}
-.an-table th{background:var(--blue-50);padding:10px 14px;text-align:left;border-bottom:1px solid var(--line);font-weight:600;font-size:11px;color:var(--ink-500);white-space:nowrap;letter-spacing:.02em}
+.an-table th{background:var(--navy-800);padding:10px 14px;text-align:left;border-bottom:1px solid rgba(255,255,255,.10);font-weight:600;font-size:11px;color:rgba(255,255,255,.85);white-space:nowrap;letter-spacing:.02em}
 .an-table th.right{text-align:right}
 .an-table td{padding:10px 14px;border-bottom:1px solid var(--line);font-size:12px;color:var(--ink-700)}
 .an-table td.right{text-align:right}
 .an-table tr:last-child td{border-bottom:none}
 .an-table tr:hover td{background:var(--blue-50)}
 .an-table .total-row td{font-weight:700;color:var(--ink-900);background:var(--blue-50);border-top:2px solid var(--line)}
+/* ── Транспонированный отчёт: строки = показатели, колонки = менеджеры ── */
+.rep-t th:first-child,.rep-t td:first-child{position:sticky;left:0;z-index:2;text-align:left;min-width:230px;background:var(--white);font-weight:600;color:var(--ink-900)}
+.rep-t thead th:first-child{background:var(--navy-800);color:#fff}
+.rep-t th.right,.rep-t td.right{text-align:right;min-width:96px}
+.rep-t td small{color:var(--ink-500);font-weight:600}
+.rep-t tr.r-total td{background:var(--blue-50);font-weight:800;color:var(--ink-900)}
+.rep-t tr.r-total td:first-child{background:var(--blue-50)}
+.rep-t tr.r-done td{background:#f4fbf5;font-weight:700}
+.rep-t tr.r-done td:first-child{background:#f4fbf5}
+.rep-t td.gtotal{background:var(--blue-50);font-weight:800;color:var(--ink-900);border-left:2px solid var(--line)}
+.rep-t th.gtotal{background:var(--navy-800);color:#fff;font-weight:800;border-left:2px solid rgba(255,255,255,.14)}
+/* Секции-подзаголовки внутри отчёта */
+.rep-t tr.sec-row td{background:var(--navy-700);color:#fff;font-family:'Manrope';font-weight:700;font-size:11px;letter-spacing:.04em;text-transform:uppercase;padding:7px 14px}
+.rep-t tr.sec-row td:first-child{background:var(--navy-700);color:#fff;position:static}
+/* Стрелки динамики (сравнение периодов) */
+.dlt{font-weight:700;font-size:11px;margin-left:4px}
+.dlt-up{color:var(--st-done)}.dlt-down{color:var(--st-cancel)}.dlt-flat{color:var(--ink-500)}
+/* Качество источника (блок под воронкой) */
+.srcq{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:-4px 2px 14px}
+.srcq-lbl{font-size:12px;font-weight:700;color:var(--ink-700)}
+.srcq-card{font-size:12px;color:var(--ink-700);background:#fff;border:1px solid var(--line);border-radius:9px;padding:6px 12px;box-shadow:var(--shadow-sm)}
+.srcq-card b{color:var(--ink-900)}
+/* ── Декомпозиция + Планы ── */
+.plans-head{display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap;margin-bottom:8px}
+.pl-lbl{display:block;font-size:11px;font-weight:600;color:var(--ink-500);margin-bottom:4px;text-transform:uppercase;letter-spacing:.02em}
+.plans-head select,.plans-head input{padding:8px 11px;border:1px solid var(--line);border-radius:9px;height:38px;font-size:13px;color:var(--ink-700);background:#fff}
+.plans-head .btn-save{height:38px}
+.plans-note{font-size:12px;color:var(--ink-500);margin-bottom:12px;max-width:920px}
+.plan-cell{width:96px;padding:6px 9px;border:1px solid var(--line);border-radius:7px;text-align:right;font-size:13px;color:var(--ink-900)}
+.plan-cell:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(47,95,208,.18)}
+.rep-t td.decd{min-width:60px;text-align:right}
+.dec-plan td{color:var(--ink-500)}
+.dec-dev-neg{color:var(--st-cancel);background:#fdf0f0!important}
+.dec-dev-pos{color:var(--st-done);background:#eefaf0!important}
+.dec-cr{font-weight:700}
+.rep-t td.future{color:#c7ccd4}
+/* Подсветка аномальных строк (старый отчёт) */
+.an-table tr.row-bad td{background:#fdf0f0}
+.an-table tr.row-bad:hover td{background:#fbe6e6}
+.an-table tr.row-good td{background:#eefaf0}
+.an-table tr.row-good:hover td{background:#e2f5e6}
+/* Сводка-воронка */
+.funnel{display:flex;align-items:stretch;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.fn-card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px 18px;min-width:150px;box-shadow:var(--shadow-sm)}
+.fn-card.ok{border-color:#bbe8c6;background:#f4fbf5}
+.fn-card.bad{border-color:#f3c4c4;background:#fdf5f5}
+.fn-card.warn{border-color:#f4dcb0;background:#fffaf1}
+.fn-num{font-family:'Manrope';font-size:24px;font-weight:800;color:var(--ink-900);line-height:1.1}
+.fn-pct{font-size:15px;font-weight:700;color:var(--ink-500)}
+.fn-card.ok .fn-pct{color:var(--st-done)}
+.fn-card.bad .fn-pct{color:var(--st-cancel)}
+.fn-card.warn .fn-pct{color:var(--st-moved)}
+.fn-lbl{font-size:12px;color:var(--ink-500);margin-top:4px;font-weight:500}
+.fn-arrow{display:flex;align-items:center;color:var(--ink-500);font-size:20px;font-weight:700}
+/* Переключатель разреза отчёта */
+.breakdown-switch{display:flex;align-items:center;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+.bd-lbl{font-size:12px;color:var(--ink-500);font-weight:600;margin-right:4px}
+.bd-btn{padding:6px 14px;border:1px solid var(--line);border-radius:9px;background:#fff;font-size:12px;font-weight:600;color:var(--ink-700);cursor:pointer;transition:.15s}
+.bd-btn:hover{border-color:var(--blue-500);color:var(--blue-700)}
+.bd-btn.active{background:var(--primary);color:#fff;border-color:var(--primary)}
 .cr-good{color:var(--st-done);font-weight:700}
 .cr-mid{color:var(--st-moved);font-weight:700}
 .cr-low{color:var(--st-cancel);font-weight:700}
@@ -105,8 +175,8 @@ td.slot.current-lead-slot{background:var(--blue-100)}
 .field select,.field input{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-size:13px;height:38px;color:var(--ink-700);background:#fff;transition:.15s}
 .field select:focus,.field input:focus{outline:none;border-color:var(--blue-500);box-shadow:0 0 0 3px var(--blue-100)}
 .modal-btns{display:flex;gap:8px;margin-top:18px;justify-content:flex-end;position:sticky;bottom:-24px;background:var(--white);padding:14px 0 4px;border-top:1px solid var(--line)}
-.btn-save{background:var(--blue-700);color:#fff;border:none;padding:10px 22px;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;transition:.15s}
-.btn-save:hover{background:var(--blue-600);box-shadow:var(--shadow)}
+.btn-save{background:var(--primary);color:#fff;border:none;padding:10px 22px;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;transition:.15s}
+.btn-save:hover{background:var(--primary-600);box-shadow:var(--shadow)}
 .btn-save:disabled{background:var(--ink-500);cursor:not-allowed}
 .btn-cancel-m{background:#fff;color:var(--ink-700);border:1px solid var(--line);padding:10px 18px;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer}
 .btn-cancel-m:hover{border-color:var(--blue-500);color:var(--blue-700)}
@@ -139,6 +209,7 @@ td.slot.current-lead-slot{background:var(--blue-100)}
   <div class="view-switch" id="view-switch">
     <button class="vs-btn active" id="vs-grid" onclick="setView('grid')">🗓️ Шахматка</button>
     <button class="vs-btn" id="vs-report" onclick="setView('report')">📊 Отчёт</button>
+    <button class="vs-btn" id="vs-decomp" onclick="setView('decomp')">📈 Декомпозиция</button>
   </div>
 
   <div class="divider"></div>
@@ -168,7 +239,7 @@ td.slot.current-lead-slot{background:var(--blue-100)}
 
   <div class="divider"></div>
 
-  <select id="mgr-filter" onchange="renderGrid();renderAnalytics()" style="font-size:12px;padding:7px 10px;border:1px solid var(--line);border-radius:9px;height:34px;max-width:170px;color:var(--ink-700)">
+  <select id="mgr-filter" onchange="renderGrid();renderAnalytics();if(currentView==='decomp')renderDecomp()" style="font-size:12px;padding:7px 10px;border:1px solid var(--line);border-radius:9px;height:34px;max-width:170px;color:var(--ink-700)">
     <option value="">Все менеджеры</option>
   </select>
 
@@ -176,9 +247,9 @@ td.slot.current-lead-slot{background:var(--blue-100)}
     <option value="">Все сегменты</option>
   </select>
 
-  <button class="btn-refresh" onclick="reloadAll()">↻ Обновить</button>
+  <button class="btn-refresh btn-primary" onclick="reloadAll()">↻ Обновить</button>
   <button class="btn-refresh" onclick="clearAllCache()" title="Полностью очистить локальный кэш и перезагрузить страницу">🧹 Очистить кэш</button>
-  <button class="btn-refresh" id="btn-bind" onclick="registerPlacements()" style="background:var(--blue-700);color:#fff;border-color:var(--blue-700)">📎 Привязать к лидам/сделкам</button>
+  <button class="btn-refresh btn-primary" id="btn-bind" onclick="registerPlacements()">📎 Привязать к лидам/сделкам</button>
   <span class="status-bar" id="status">Инициализация...</span>
 </div>
 
@@ -197,6 +268,7 @@ td.slot.current-lead-slot{background:var(--blue-100)}
       <div class="leg"><div class="leg-dot" style="background:var(--st-done)"></div>Проведена</div>
       <div class="leg"><div class="leg-dot" style="background:var(--st-moved)"></div>Перенесена</div>
       <div class="leg"><div class="leg-dot" style="background:var(--st-cancel)"></div>Отмена</div>
+      <div class="leg"><div class="leg-dot" style="background:var(--st-giventm)"></div>Отдано в ТМ</div>
     </div>
   </div>
 
@@ -206,22 +278,60 @@ td.slot.current-lead-slot{background:var(--blue-100)}
       Аналитика за период
       <span class="product-badge" id="analytics-badge">Аккаунтинг</span>
     </div>
-    <div class="analytics">
-      <table class="an-table">
-        <thead><tr>
-          <th>Менеджер ОП</th>
-          <th class="right" title="Назначили → Отменили → Перенесли → Провели">1. Отмена→Перенос→Провели</th>
-          <th class="right" title="Назначили → Отменили → Не провели">2. Отмена→Не провели</th>
-          <th class="right" title="Назначили → Провели">3. Назн→Провели</th>
-          <th class="right" title="Назначили → Перенесли → Провели">4. Перенос→Провели</th>
-          <th class="right" title="Назначили → Перенесли → Не провели">5. Перенос→Не провели</th>
-          <th class="right" title="Назначили повторно → Перенесли → Провели">6. Повтор→Перенос→Провели</th>
-          <th class="right">Всего</th>
-        </tr></thead>
-        <tbody id="analytics-body">
-          <tr><td colspan="8" style="text-align:center;color:#aaa;padding:16px">Загрузка...</td></tr>
-        </tbody>
-      </table>
+
+    <div class="breakdown-switch">
+      <span class="bd-lbl">Разрез:</span>
+      <button class="bd-btn active" data-bd="mgr"     onclick="setBreakdown('mgr',this)">По менеджерам</button>
+      <button class="bd-btn"        data-bd="segment" onclick="setBreakdown('segment',this)">По сегментам</button>
+      <button class="bd-btn"        data-bd="source"  onclick="setBreakdown('source',this)">По источнику</button>
+      <button class="bd-btn"        data-bd="tm"      onclick="setBreakdown('tm',this)">По ТМ</button>
+    </div>
+
+    <div id="funnel-summary"></div>
+    <div class="analytics"><div class="an-scroll" id="analytics-table">
+      <div style="text-align:center;color:#aaa;padding:16px">Загрузка...</div>
+    </div></div>
+  </div>
+
+  <!-- ═══ ВКЛАДКА: ДЕКОМПОЗИЦИЯ ═══ -->
+  <div id="view-decomp" style="display:none">
+    <div class="section-title">
+      Декомпозиция ОП
+      <span class="product-badge" id="decomp-badge">Аккаунтинг</span>
+      <span id="decomp-month-lbl" style="font-size:12px;font-weight:600;color:var(--ink-500)"></span>
+    </div>
+
+    <div class="breakdown-switch">
+      <span class="bd-lbl">Раздел:</span>
+      <button class="bd-btn active" id="ds-report" onclick="setDecompSub('report',this)">Декомпозиция</button>
+      <button class="bd-btn"        id="ds-plans"  onclick="setDecompSub('plans',this)">Планы</button>
+    </div>
+
+    <!-- Планы -->
+    <div id="decomp-plans" style="display:none">
+      <div class="plans-head">
+        <div>
+          <label class="pl-lbl">Целевой CR, %</label>
+          <input type="number" id="plan-cr" min="0" max="100" step="1" style="width:120px" oninput="recalcPlanPreview()">
+        </div>
+        <div>
+          <label class="pl-lbl">Рабочих дней в месяце</label>
+          <input type="number" id="plan-workdays" min="1" max="31" style="width:120px">
+        </div>
+        <button class="btn-save" id="btn-save-plan" onclick="savePlanFromForm()">Сохранить план</button>
+        <span id="plan-status" style="font-size:12px;color:var(--ink-500)"></span>
+      </div>
+      <div class="plans-note">План общий на весь ОП, помесячный, хранится в Б24. Назначенные встречи = «сделок пришло» (число сделок, созданных в месяце — тянется из Б24). CR задаёте вручную; план проведённых считается автоматически: назначенные × CR. В декомпозиции план равномерно раскидывается по рабочим дням месяца.</div>
+      <div class="analytics"><div class="an-scroll">
+        <table class="an-table rep-t" id="plans-table"></table>
+      </div></div>
+    </div>
+
+    <!-- Декомпозиция -->
+    <div id="decomp-report">
+      <div class="analytics"><div class="an-scroll" id="decomp-table">
+        <div style="text-align:center;color:#aaa;padding:16px">Загрузка...</div>
+      </div></div>
     </div>
   </div>
 
@@ -252,19 +362,8 @@ td.slot.current-lead-slot{background:var(--blue-100)}
       <input type="date" id="m-date" onchange="updateDateTimePreview()">
     </div>
     <div class="field">
-      <label>Время встречи</label>
-      <select id="m-time" onchange="updateDateTimePreview()">
-        <option value="09:00">09:00</option>
-        <option value="10:00">10:00</option>
-        <option value="11:00">11:00</option>
-        <option value="12:00">12:00</option>
-        <option value="13:00">13:00</option>
-        <option value="14:00">14:00</option>
-        <option value="15:00">15:00</option>
-        <option value="16:00">16:00</option>
-        <option value="17:00">17:00</option>
-        <option value="18:00">18:00</option>
-      </select>
+      <label>Время встречи (часы и минуты)</label>
+      <input type="time" id="m-time" step="60" onchange="updateDateTimePreview()" style="width:100%">
       <div id="dt-preview" style="margin-top:7px;font-size:12px;font-weight:600;color:var(--blue-700);background:var(--blue-50);border-radius:9px;padding:8px 11px">📅 —</div>
     </div>
     <div class="field">
@@ -287,6 +386,7 @@ td.slot.current-lead-slot{background:var(--blue-100)}
         <option value="done">Проведена</option>
         <option value="moved">Перенесена</option>
         <option value="cancel">Отмена</option>
+        <option value="given_tm">Отдано в ТМ</option>
       </select>
     </div>
     <div id="lead-id-info" style="display:none;font-size:12px;color:var(--blue-700);padding:6px 0">
@@ -312,7 +412,7 @@ td.slot.current-lead-slot{background:var(--blue-100)}
 const WEBHOOK = 'https://crm.seller24.ru/rest/5/9yr3u419ap9cvzn7/';
 const F = {
   date     : 'UF_CRM_1750841189',   // дата/время встречи (основное поле в системе)
-  status   : 'UF_CRM_1779825277',   // статус встречи
+  status   : 'UF_CRM_SH_MSTATUS',   // статус встречи (создано: enumeration, см. STATUS_IDS)
   tm       : 'UF_CRM_1675251074',   // телемаркетолог
   manager  : 'UF_CRM_1781713296',   // менеджер ОП, выбранный в шахматке (НЕ трогаем ASSIGNED_BY_ID)
   assigned : 'ASSIGNED_BY_ID',      // ответственный лида — оставляем как есть, не перезаписываем
@@ -351,18 +451,23 @@ function parseDeptThreshold(name) {
 }
 
 const STATUS_IDS = {
-  assigned  : '5306',
-  confirmed : '5305',
-  moved     : '5304',
-  done      : '5310',
+  assigned  : '5324',
+  confirmed : '5325',
+  moved     : '5327',
+  done      : '5326',
+  cancel    : '5328',
+  given_tm  : '5329',
 };
 
 // ════════════════════════════════════════════════
-//  ЖУРНАЛ СТАТУСОВ ВСТРЕЧИ + КЛАССИФИКАЦИЯ ДЛЯ ОТЧЁТА
+//  ЖУРНАЛ СТАТУСОВ ВСТРЕЧИ
 // ════════════════════════════════════════════════
 // Журнал хранится в поле F.journal. Формат строки: "ISODATE ключ".
 // Поле может быть "много значений" (массив строк) или одна строка с \n.
-// Ключи: assigned | confirmed | moved | done | cancel
+// Ключи: assigned | confirmed | moved | done | cancel | given_tm
+
+// Разрешённые ключи статусов в журнале.
+const JOURNAL_KEYS = ['assigned','confirmed','moved','done','cancel','given_tm'];
 
 // Парсим значение поля-журнала в массив ключей статусов по порядку.
 function parseJournal(raw) {
@@ -376,7 +481,7 @@ function parseJournal(raw) {
       const parts = s.split(/\s+/);
       return parts[parts.length - 1]; // последний токен — ключ статуса
     })
-    .filter(k => ['assigned','confirmed','moved','done','cancel'].includes(k));
+    .filter(k => JOURNAL_KEYS.includes(k));
 }
 
 // Дописываем новую запись в журнал, если статус реально изменился.
@@ -389,7 +494,7 @@ function appendJournal(raw, newStatusKey) {
   const keys = parseJournal(raw);
   const last = keys[keys.length - 1];
   // Не дублируем, если последний статус тот же (кроме assigned — повторное
-  // назначение важно фиксировать для п.6 "назначили повторно").
+  // назначение важно фиксировать для "назначили повторно").
   if (last === newStatusKey && newStatusKey !== 'assigned') return lines;
 
   const stamp = new Date().toISOString().slice(0, 16); // YYYY-MM-DDTHH:MM
@@ -397,50 +502,13 @@ function appendJournal(raw, newStatusKey) {
   return lines;
 }
 
-// Классифицируем встречу в ОДНУ из 6 категорий по журналу.
-// Возвращаем ключ категории cat1..cat6 или '' (не подходит ни под одну).
-// Категории взаимоисключающие — правила проверяются сверху вниз.
-function classifyMeeting(journalRaw) {
-  const seq = parseJournal(journalRaw);
-  if (!seq.length) return '';
-  const has     = k => seq.includes(k);
-  const finalDone = seq[seq.length - 1] === 'done';
-  const assignedCount = seq.filter(k => k === 'assigned').length;
-  const hasCancel = has('cancel');
-  const hasMoved  = has('moved');
-
-  // 6) назначили ПОВТОРНО → перенесли → провели  (assigned ≥2, был перенос, финал провели)
-  if (assignedCount >= 2 && hasMoved && finalDone) return 'cat6';
-  // 1) назначили → отменили → перенесли → провели
-  if (hasCancel && hasMoved && finalDone) return 'cat1';
-  // 2) назначили → отменили → не провели
-  if (hasCancel && !finalDone) return 'cat2';
-  // 4) назначили → перенесли → провели (без отмены)
-  if (!hasCancel && hasMoved && finalDone) return 'cat4';
-  // 5) назначили → перенесли → не провели (без отмены)
-  if (!hasCancel && hasMoved && !finalDone) return 'cat5';
-  // 3) назначили → провели (без отмены и без переноса)
-  if (!hasCancel && !hasMoved && finalDone) return 'cat3';
-  return '';
-}
-
-const REPORT_CATS = [
-  { key:'cat1', label:'Назн→Отмена→Перенос→Провели' },
-  { key:'cat2', label:'Назн→Отмена→Не провели' },
-  { key:'cat3', label:'Назн→Провели' },
-  { key:'cat4', label:'Назн→Перенос→Провели' },
-  { key:'cat5', label:'Назн→Перенос→Не провели' },
-  { key:'cat6', label:'Назн.повторно→Перенос→Провели' },
-];
-
-
 const PRODUCT_IDS = {
   accounting : '1228',
   platform   : '1229',
 };
 
-const SLOTS = ['9:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00'];
-const CSS   = {assigned:'s-assigned',confirmed:'s-confirmed',done:'s-done',moved:'s-moved',cancel:'s-cancel',own:'s-own'};
+const SLOTS = ['9:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00','20:00','21:00'];
+const CSS   = {assigned:'s-assigned',confirmed:'s-confirmed',done:'s-done',moved:'s-moved',cancel:'s-cancel',own:'s-own',given_tm:'s-giventm'};
 
 // ════════════════════════════════════════════════
 //  СОСТОЯНИЕ
@@ -451,6 +519,7 @@ let dateFrom       = null;
 let dateTo         = null;
 let currentProduct = 'accounting';
 let allEntries     = [];
+let prevEntries    = [];   // встречи предыдущего периода (для стрелок динамики)
 let managers       = [];
 let tms            = [];
 let editId         = null, modalMgr, modalSlot, modalDate;
@@ -556,11 +625,8 @@ async function apiAll(method, params = {}) {
 }
 
 // ════════════════════════════════════════════════
-//  ПРОСТОЙ КЭШ (sessionStorage, чтобы не дёргать
-//  Б24 заново при каждом открытии карточки лида)
+//  ПРОСТОЙ КЭШ (localStorage)
 // ════════════════════════════════════════════════
-// ВАЖНО: localStorage, а не sessionStorage —
-// чтобы кэш переживал переоткрытие iframe в разных карточках лидов/сделок.
 function cacheGet(key, ttlMs) {
   try {
     const raw = localStorage.getItem(key);
@@ -636,9 +702,8 @@ function normalizeSegLetter(ch) {
 
 // Расшифровываем список значений поля (crm.lead.fields):
 //  - сегментацию UF_CRM_1730551844 (буква A/C/D/...),
-//  - статус встречи UF_CRM_1779825277 (Назначена/Подтверждена/Проведена/Перенесена),
+//  - статус встречи UF_CRM_SH_MSTATUS (Назначена/Подтверждена/Проведена/Перенесена/Отдано в ТМ),
 //    и подменяем захардкоженные STATUS_IDS реальными ID из Б24 (по тексту).
-// Кэш на чтение НЕ используем (лёгкий вызов), чтобы ID не «залипали» старыми.
 async function loadSegmentField(force = false) {
   try {
     const fields = await apiOne('crm.lead.fields', {});
@@ -678,9 +743,9 @@ async function loadSegmentField(force = false) {
   }
 }
 
-// Сопоставляем ключи статусов (assigned/confirmed/moved/done) с реальными ID
-// значений списка UF_CRM_1779825277 по тексту. Так статус сохраняется корректно
-// даже если захардкоженные ID устарели/не совпадают с порталом.
+// Сопоставляем ключи статусов с реальными ID значений списка UF_CRM_SH_MSTATUS
+// по тексту. Так статус сохраняется корректно даже если захардкоженные ID
+// устарели/не совпадают с порталом.
 function resolveStatusIds(fields) {
   try {
     const def = fields && fields[F.status];
@@ -697,18 +762,21 @@ function resolveStatusIds(fields) {
       confirmed : byText(/подтвер/i),
       moved     : byText(/перенес/i),
       done      : byText(/провед/i),
+      cancel    : byText(/отмен/i),
+      given_tm  : byText(/отдан/i),   // "Отдано в ТМ"
     };
     let changed = 0;
     Object.keys(map).forEach(k => {
       if (map[k] && map[k] !== STATUS_IDS[k]) { STATUS_IDS[k] = map[k]; changed++; }
     });
     log('🏳️ Статусы встречи (' + F.status + '): ' +
-        Object.keys(STATUS_IDS).map(k => k + '=' + STATUS_IDS[k]).join(', ') +
+        Object.keys(STATUS_IDS).map(k => k + '=' + (STATUS_IDS[k] || '—')).join(', ') +
         (changed ? ' (обновлено из Б24: ' + changed + ')' : ''));
     const miss = Object.keys(map).filter(k => !map[k]);
     if (miss.length) {
       log('⚠️ Не нашёл в списке статусов значения для: ' + miss.join(', ') +
-          '. Доступные: ' + def.items.map(i => i.VALUE).join(' | '));
+          '. Доступные: ' + def.items.map(i => i.VALUE).join(' | ') +
+          (miss.includes('given_tm') ? ' — добавьте в список UF_CRM_SH_MSTATUS значение "Отдано в ТМ".' : ''));
     }
   } catch (e) {
     log('⚠️ resolveStatusIds: ' + e.message);
@@ -716,8 +784,6 @@ function resolveStatusIds(fields) {
 }
 
 // Находим ID отделов по названию (department.get) и грузим их сотрудников.
-// Кэш НЕ используем на чтение специально — отделы лёгкие, а «залипший» пустой
-// кэш раньше приводил к "нет сотрудников — показываю всех". Всегда грузим свежее.
 async function loadSegmentDepartments(force = false) {
   try {
     const allDepts = await apiAll('department.get', {});
@@ -741,10 +807,7 @@ async function loadSegmentDepartments(force = false) {
       }
     });
 
-    // Забираем ВСЕХ активных пользователей один раз и раскладываем по отделам
-    // на клиенте. Это надёжнее, чем фильтр user.get по UF_DEPARTMENT: поле
-    // UF_DEPARTMENT у пользователя — массив ID отделов, и серверный фильтр
-    // по вложенным/множественным отделам иногда возвращает пусто.
+    // Забираем ВСЕХ активных пользователей один раз и раскладываем по отделам на клиенте.
     const allUsers = await apiAll('user.get', { filter: { ACTIVE: true }, select: ['ID','NAME','LAST_NAME','UF_DEPARTMENT'] });
     log('👥 Всего активных пользователей: ' + allUsers.length);
 
@@ -768,7 +831,6 @@ async function loadSegmentDepartments(force = false) {
       segmentManagers[letter] = usersByDept[segmentDeptIds[letter]] || [];
     });
 
-    // Подробный лог по каждому отделу — видно сразу, где пусто
     uniqueDeptIds.forEach(deptId => {
       const list = usersByDept[deptId] || [];
       log('🏢 Отдел id=' + deptId + ': ' + list.length + ' чел.' +
@@ -783,7 +845,6 @@ async function loadSegmentDepartments(force = false) {
 }
 
 // Список менеджеров для выбранного значения сегмента (по ID значения поля).
-// Если сегмент не выбран/не распознан — возвращаем null (значит "не фильтровать", показываем всех).
 function managersForSegmentValue(segId) {
   if (!segId) return null;
   const letter = segmentIdToLetter[String(segId)];
@@ -805,12 +866,12 @@ function fillSegmentFilterSelect() {
     segmentFieldItems.map(i => `<option value="${i.id}"${i.id===cur?' selected':''}>${i.label}</option>`).join('');
 }
 
-// Тулбарный фильтр сегмента — ограничивает сетку менеджерами нужного отдела,
-// независимо от того, открыта ли шахматка из карточки лида.
+// Тулбарный фильтр сегмента — ограничивает сетку менеджерами нужного отдела.
 function onSegmentFilterChange() {
   activeSegmentId = document.getElementById('segment-filter').value;
   renderGrid();
   renderAnalytics();
+  if (currentView === 'decomp') renderDecomp();
 }
 
 // ════════════════════════════════════════════════
@@ -834,7 +895,6 @@ async function loadEntries(from, to, force = false) {
     const rangeFilter = { ['>=' + F.date]: fromISO, ['<=' + F.date]: toISO };
 
     // Серверная фильтрация по диапазону дат — единственный путь.
-    // Никаких fallback'ов с загрузкой всей базы лидов!
     const d0 = await apiPage('crm.lead.list', { filter: rangeFilter, select: SELECT, order: ORDER, start: 0 });
 
     if (d0.error) {
@@ -852,9 +912,8 @@ async function loadEntries(from, to, force = false) {
       return [];
     }
 
-    // 🛑 СТОП-КРАН: если Б24 вернул больше 200 лидов на одну дату/период,
-    // значит серверный фильтр по UF-полю не работает (вернул всю базу).
-    // Не грузим лавиной — берём только первую страницу и фильтруем на клиенте.
+    // 🛑 СТОП-КРАН: если Б24 вернул больше 200 лидов на одну дату/период —
+    // серверный фильтр по UF-полю не работает (вернул всю базу).
     const HARD_LIMIT = 200;
     if (total > HARD_LIMIT) {
       log('🛑 Б24 вернул ' + total + ' лидов — фильтр по UF-дате не работает. Беру только первые 50.');
@@ -892,25 +951,43 @@ function mapLead(item) {
   const dt   = item[F.date] || '';
   const date = dt.slice(0, 10);
   const hh   = parseInt(dt.slice(11, 13));
-  const slot = (isNaN(hh) ? 9 : hh) + ':00';
+  const slot = (isNaN(hh) ? 9 : hh) + ':00';        // час-корзина для сетки
+  const time = dt.length >= 16 ? dt.slice(11, 16) : slot;  // точное время HH:MM (с минутами)
 
-  const rawStatus = item[F.status];
-  const statusArr = Array.isArray(rawStatus)
-    ? rawStatus.map(String)
-    : (rawStatus ? [String(rawStatus)] : []);
-  let statusKey = 'assigned';
-  if      (statusArr.includes(STATUS_IDS.done))      statusKey = 'done';
-  else if (statusArr.includes(STATUS_IDS.moved))     statusKey = 'moved';
-  else if (statusArr.includes(STATUS_IDS.confirmed)) statusKey = 'confirmed';
-  else if (statusArr.includes(STATUS_IDS.assigned))  statusKey = 'assigned';
-  else if (item.STATUS_ID === 'WON')                 statusKey = 'done';
-  else if (item.STATUS_ID === 'JUNK')                statusKey = 'cancel';
+  // Текущий статус берём ИЗ ЖУРНАЛА (F.journal) — это надёжный источник,
+  // т.к. поле статуса F.status в лидах может отсутствовать/не записываться.
+  // Последняя запись журнала = текущий статус. Фолбэк — поле статуса и STATUS_ID.
+  const jseq = parseJournal(item[F.journal]);
+  let statusKey;
+  if (jseq.length) {
+    statusKey = jseq[jseq.length - 1];
+  } else {
+    const rawStatus = item[F.status];
+    const statusArr = Array.isArray(rawStatus)
+      ? rawStatus.map(String)
+      : (rawStatus ? [String(rawStatus)] : []);
+    statusKey = 'assigned';
+    if      (statusArr.includes(STATUS_IDS.done))                      statusKey = 'done';
+    else if (statusArr.includes(STATUS_IDS.moved))                     statusKey = 'moved';
+    else if (STATUS_IDS.given_tm && statusArr.includes(STATUS_IDS.given_tm)) statusKey = 'given_tm';
+    else if (statusArr.includes(STATUS_IDS.confirmed))                 statusKey = 'confirmed';
+    else if (statusArr.includes(STATUS_IDS.assigned))                  statusKey = 'assigned';
+    else if (item.STATUS_ID === 'WON')                                 statusKey = 'done';
+    else if (item.STATUS_ID === 'JUNK')                                statusKey = 'cancel';
+  }
+
+  // ── Авто-отмена по логам/времени ──
+  // Если встреча в прошлом и всё ещё "Назначена" (не подтверждена, статус не менялся) —
+  // считаем её отменённой автоматически. Подтверждённые/перенесённые/проведённые не трогаем.
+  let autoCancel = false;
+  if (statusKey === 'assigned' && dt) {
+    const t = new Date(dt).getTime();
+    if (!isNaN(t) && t < Date.now()) { statusKey = 'cancel'; autoCancel = true; }
+  }
 
   const hasTM   = !!(item[F.tm]);
   const source  = hasTM ? 'tm' : 'own';
-  // UF_CRM_1781713296 может вернуться как массив (поле "Привязка к сотруднику")
-  // или как строка/число. Нормализуем к строковому ID. Фолбэк на ASSIGNED_BY_ID —
-  // только для старых записей, где менеджер ещё лежал в ответственном.
+  // UF_CRM_1781713296 может вернуться массивом или строкой/числом. Нормализуем к строковому ID.
   let rawMgr = item[F.manager];
   if (Array.isArray(rawMgr)) rawMgr = rawMgr[0];
   const mgrFromField = rawMgr ? String(rawMgr) : '';
@@ -920,7 +997,7 @@ function mapLead(item) {
 
   return {
     id: String(item.ID), mgr: mgrId,
-    date, slot, source, product,
+    date, slot, time, autoCancel, source, product,
     tm       : String(item[F.tm] || ''),
     client   : String(item.TITLE || ''),
     status   : statusKey,
@@ -929,7 +1006,6 @@ function mapLead(item) {
     creator  : String(item.CREATED_BY_ID || ''),   // кто создал лид
     entity   : 'lead',                              // тип сущности (лид/сделка)
     journal  : item[F.journal] || '',               // сырой журнал статусов
-    category : classifyMeeting(item[F.journal] || ''), // cat1..cat6 или ''
   };
 }
 
@@ -962,27 +1038,21 @@ async function saveEntry() {
 
     const productVal = PRODUCT_IDS[product] || '';
 
-    const statusVal = [];
-    if (skey === 'assigned')  statusVal.push(STATUS_IDS.assigned);
-    if (skey === 'confirmed') statusVal.push(STATUS_IDS.confirmed);
-    if (skey === 'moved')     statusVal.push(STATUS_IDS.moved);
-    if (skey === 'done')      statusVal.push(STATUS_IDS.done);
+    // Поле статуса — одиночное (enumeration), пишем один ID значения.
+    const statusId = STATUS_IDS[skey] || '';
 
     const fields = {
       TITLE          : client || (source === 'own' ? 'Своя встреча' : 'Встреча от ТМ'),
       [F.manager]    : parseInt(mgrId) || null,   // менеджер из шахматки → в отдельное поле
       [F.date]       : dtVal ? dtVal + ':00' : '',
       [F.tm]         : source === 'tm' ? (parseInt(tmId) || null) : null,
-      [F.status]     : statusVal,
+      [F.status]     : statusId,
       [F.product]    : productVal,
       [F.segment]    : segVal || null,
     };
-    // ВАЖНО: ASSIGNED_BY_ID (ответственный лида) намеренно НЕ включаем в fields —
-    // ответственный должен оставаться прежним. Менеджер встречи хранится в F.manager.
+    // ВАЖНО: ASSIGNED_BY_ID (ответственный лида) намеренно НЕ включаем — он остаётся прежним.
 
     // ── Журнал статусов: дописываем текущий статус в историю встречи ──
-    // Берём прежний журнал из уже загруженной встречи (если это редактирование)
-    // или из привязанного лида, затем добавляем новую запись при изменении.
     try {
       const targetId = editId || currentLeadId;
       let prevJournal = '';
@@ -990,7 +1060,6 @@ async function saveEntry() {
         const ex = allEntries.find(x => x.id === String(targetId));
         if (ex && ex.journal) prevJournal = ex.journal;
         else {
-          // подстрахуемся — читаем из Б24
           const cur = await apiOne('crm.lead.get', { id: parseInt(targetId) });
           prevJournal = (cur && cur[F.journal]) || '';
         }
@@ -1006,9 +1075,7 @@ async function saveEntry() {
       await apiOne('crm.lead.update', { id: parseInt(editId), fields });
       savedLeadId = editId;
     } else if (currentLeadId) {
-      // Назначение встречи из карточки лида.
-      // Название лида (TITLE) не трогаем — оно уже есть у лида.
-      // Ответственного (ASSIGNED_BY_ID) тоже не трогаем.
+      // Назначение встречи из карточки лида. TITLE и ASSIGNED_BY_ID не трогаем.
       const updateFields = { ...fields };
       delete updateFields.TITLE;
       await apiOne('crm.lead.update', { id: parseInt(currentLeadId), fields: updateFields });
@@ -1021,9 +1088,7 @@ async function saveEntry() {
 
     closeModal();
 
-    // Обновляем встречи текущего периода БЕЗ повторного автоподтягивания
-    // лида (иначе loadData снова дёргает дату/сегмент/продукт и "обновляет"
-    // экран, сбивая контекст). Просто перезагружаем список встреч за период.
+    // Обновляем встречи текущего периода
     try {
       const dates = getDates();
       const from  = dateKey(dates[0]);
@@ -1034,7 +1099,6 @@ async function saveEntry() {
     }
 
     // Гарантированно подтягиваем только что сохранённый лид и добавляем в сетку.
-    // Это нужно потому что серверный фильтр Б24 по UF-дате может его не вернуть.
     if (savedLeadId) {
       try {
         const lead = await apiOne('crm.lead.get', { id: parseInt(savedLeadId) });
@@ -1046,8 +1110,6 @@ async function saveEntry() {
               ' | дата ' + F.date + '=' + JSON.stringify(lead[F.date]));
           log('💾 mapped → mgr=' + mapped.mgr + ', date=' + mapped.date + ', slot=' + mapped.slot + ', product=' + mapped.product);
 
-          // Если сохранили на дату, отличную от текущей выбранной — сразу
-          // переключаем шахматку на эту дату, чтобы встреча была видна.
           const curKey = dateKey(currentDate);
           if (period === 'day' && mapped.date && mapped.date !== curKey) {
             const [y, m, d] = mapped.date.split('-').map(Number);
@@ -1057,8 +1119,6 @@ async function saveEntry() {
             log('📅 Переключаю шахматку на дату встречи: ' + mapped.date);
           }
 
-          // Если менеджер встречи не в текущем списке строк — добавим его,
-          // иначе встреча "исчезнет" (не будет строки, куда её положить).
           if (mapped.mgr && !managers.find(m => m.id === mapped.mgr)) {
             try {
               const u = await apiOne('user.get', { ID: parseInt(mapped.mgr) });
@@ -1071,7 +1131,6 @@ async function saveEntry() {
             }
           }
 
-          // Удаляем старую версию если была, добавляем свежую
           allEntries = allEntries.filter(e => e.id !== String(savedLeadId));
           allEntries.push(mapped);
           renderGrid();
@@ -1150,18 +1209,6 @@ function uname(id, list) {
 }
 
 // Список менеджеров с учётом фильтра "мгр-фильтр" + фильтра по сегменту (тулбар).
-// Используется и в сетке, и в аналитике, чтобы они не расходились.
-//
-// Логика:
-// - Если выбран сегмент → показываем СОТРУДНИКОВ ЭТОГО ОТДЕЛА напрямую,
-//   даже если они не входят в базовый отдел ОП 17. Это важно, потому что
-//   отделы сегментов ("Лиды от ТМ (сегмент ...)") — самостоятельные отделы,
-//   а не подмножество отдела 17. Раньше делалась интерсекция, и если
-//   у сегмента был отдельный состав — получался пустой список, и фильтр
-//   молча отваливался в "показать всех". Теперь этого не будет.
-// - Дополнительно фильтр по менеджеру (mgr-filter) применяется поверх.
-// - Если менеджера сегмента ещё нет в глобальном списке `managers` —
-//   докидываем его туда, чтобы карточки встреч в его строке отрисовались.
 function getFilteredManagers() {
   const sel    = document.getElementById('mgr-filter');
   const mgrVal = sel ? sel.value : '';
@@ -1171,8 +1218,6 @@ function getFilteredManagers() {
     const segList = managersForSegmentValue(activeSegmentId);
     if (segList && segList.length) {
       baseList = segList;
-      // Регистрируем в глобальном списке всех, кого встретили только через сегмент,
-      // чтобы uname()/openModal и т.п. знали их имена.
       const known = new Set(managers.map(m => m.id));
       segList.forEach(m => { if (!known.has(m.id)) managers.push(m); });
     } else {
@@ -1188,11 +1233,8 @@ function getFilteredManagers() {
 }
 
 function fitBX24Window() {
-  // Расширяет iframe приложения под высоту содержимого.
-  // Без этого во вкладке лида шахматка обрезается по высоте карточки Б24.
   try {
     if (typeof BX24 === 'undefined') return;
-    // Считаем полную высоту документа + запас 20px
     const h = Math.max(
       document.body.scrollHeight,
       document.documentElement.scrollHeight,
@@ -1235,7 +1277,6 @@ function renderGrid() {
     const dsArr = period === 'day' ? [dateKey(dates[0])] : dates.map(dateKey);
     dsArr.forEach(ds => {
       SLOTS.forEach(sl => {
-        // Ищем лид в этом слоте (среди всех, не только текущего продукта — для подсветки)
         const e = allEntries.find(x =>
           x.mgr === mgr.id && x.date === ds && x.slot === sl &&
           x.product === currentProduct
@@ -1243,10 +1284,11 @@ function renderGrid() {
         if (!e) {
           html += `<td class="slot empty" onclick="openModal(null,'${mgr.id}','${sl}','${ds}')"></td>`;
         } else {
-          const css  = CSS[e.source === 'own' ? 'own' : e.status] || 's-assigned';
+          const css  = e.autoCancel ? 's-cancel' : (CSS[e.source === 'own' ? 'own' : e.status] || 's-assigned');
           const tmName = e.source === 'tm' ? uname(e.tm, tms) : '';
-          const lbl  = e.client || tmName || e.status;
-          const tip  = [e.client, tmName ? 'ТМ: '+tmName : ''].filter(Boolean).join(' | ');
+          const auto = e.autoCancel ? ' ⚠ авто-отмена (не подтверждена, время прошло)' : '';
+          const lbl  = (e.time ? e.time + ' ' : '') + (e.client || tmName || e.status);
+          const tip  = [e.time, e.client, tmName ? 'ТМ: '+tmName : ''].filter(Boolean).join(' | ') + auto;
           const isCurrent = e.id === currentLeadId;
           html += `<td class="slot${isCurrent?' current-lead-slot':''}" onclick="openModal('${e.id}','${mgr.id}','${sl}','${ds}')" oncontextmenu="event.preventDefault(); openLeadCard('${e.id}'); return false;" title="ПКМ: открыть карточку лида"><span class="cell ${css}" title="${tip}">${lbl}</span></td>`;
         }
@@ -1259,58 +1301,607 @@ function renderGrid() {
 }
 
 // ════════════════════════════════════════════════
-//  АНАЛИТИКА
+//  АНАЛИТИКА (транспонированный отчёт)
 // ════════════════════════════════════════════════
-function crCell(val) {
-  if (val < 0) return '<td class="right">—</td>';
-  const cls = val >= 75 ? 'cr-good' : val >= 50 ? 'cr-mid' : 'cr-low';
-  return `<td class="right ${cls}">${val}%</td>`;
+let reportBreakdown = 'mgr'; // 'mgr' | 'segment' | 'source'
+
+function setBreakdown(bd, el) {
+  reportBreakdown = bd;
+  document.querySelectorAll('.bd-btn').forEach(b => b.classList.remove('active'));
+  if (el) el.classList.add('active');
+  renderAnalytics();
+}
+
+// Возвращает [{key, name, filter(entry)}] — группы в зависимости от разреза.
+function getReportGroups() {
+  if (reportBreakdown === 'segment') {
+    const groups = segmentFieldItems.map(it => ({
+      key: it.id, name: it.label,
+      filter: e => String(e.segment) === String(it.id),
+    }));
+    groups.push({ key:'__none__', name:'Без сегмента', filter: e => !e.segment });
+    return groups;
+  }
+  if (reportBreakdown === 'source') {
+    return [
+      { key:'tm',  name:'От телемаркетолога', filter: e => e.source === 'tm'  },
+      { key:'own', name:'Свои',               filter: e => e.source === 'own' },
+    ];
+  }
+  if (reportBreakdown === 'tm') {
+    const groups = tms.map(t => ({
+      key: t.id, name: t.name,
+      filter: e => e.source === 'tm' && String(e.tm) === String(t.id),
+    }));
+    groups.push({ key:'__own__', name:'Свои (без ТМ)', filter: e => e.source === 'own' });
+    return groups;
+  }
+  return getFilteredManagers().map(mgr => ({
+    key: mgr.id, name: mgr.name,
+    filter: e => e.mgr === mgr.id,
+  }));
+}
+
+// Строки отчёта (в порядке отображения). kind: total | done | chain.
+const REPORT_ROWS = [
+  { key:'total',         label:'Всего назначено',                       kind:'total', title:'Все назначенные встречи за период' },
+  { key:'confirmedAny',  label:'Подтверждено',                          kind:'chain', title:'Встречи, дошедшие до статуса Подтверждена (на любом этапе)' },
+  { key:'mv_done',       label:'Перенесено → Проведено',                kind:'chain', title:'Был перенос, без отдачи в ТМ, финал — проведено' },
+  { key:'mv_gtm',        label:'Перенесено → Отдано в ТМ',              kind:'chain', title:'Был перенос, затем отдано в ТМ (в работе)' },
+  { key:'mv_cancel',     label:'Перенесено → Отмена',                   kind:'chain', title:'Был перенос, без отдачи в ТМ, финал — отмена' },
+  { key:'mv_gtm_cancel', label:'Перенесено → Отдано в ТМ → Отмена',    kind:'chain', title:'Перенос → отдано в ТМ → отмена' },
+  { key:'mv_gtm_done',   label:'Перенесено → Отдано в ТМ → Проведено', kind:'chain', title:'Перенос → отдано в ТМ → проведено' },
+  { key:'done',          label:'Проведено',                             kind:'done',  title:'Всего доведено до "Проведено" (любым путём)' },
+];
+
+const DAY_MS   = 86400000;
+const HANG_DAYS = 7;   // порог "висит дольше N дней" для незакрытых встреч
+
+// Разбираем журнал в массив {key, ts:Date|null} в хронологическом порядке.
+function parseJournalTs(raw) {
+  let lines = [];
+  if (Array.isArray(raw)) lines = raw.map(String);
+  else if (raw) lines = String(raw).split(/\r?\n/);
+  return lines
+    .map(s => s.trim())
+    .filter(Boolean)
+    .map(s => {
+      const parts = s.split(/\s+/);
+      const key   = parts[parts.length - 1];
+      const tsStr = parts[0];
+      const ts    = /^\d{4}-\d{2}-\d{2}/.test(tsStr) ? new Date(tsStr) : null;
+      return { key, ts: (ts && !isNaN(ts)) ? ts : null };
+    })
+    .filter(x => JOURNAL_KEYS.includes(x.key));
+}
+
+// Время начала встречи из полей entry (фолбэк, если журнал пуст).
+function entryStartMs(e) {
+  if (!e.date) return null;
+  const [h, mn] = String(e.slot || '9:00').split(':');
+  const t = new Date(e.date + 'T' + String(h).padStart(2, '0') + ':' + (mn || '00'));
+  return isNaN(t) ? null : t.getTime();
+}
+
+// Пустой шаблон счётчиков (используется и как аккумулятор итога).
+function emptyCounters() {
+  return { total:0, mv_done:0, mv_gtm:0, mv_cancel:0, mv_gtm_cancel:0, mv_gtm_done:0,
+           done:0, cancelAll:0, confirmedAny:0, movedAny:0, noShow:0, movesTotal:0, gtmAll:0,
+           durDoneSum:0, durDoneN:0, firstMoveSum:0, firstMoveN:0, hang:0 };
+}
+
+// Считаем все показатели по одной группе встреч.
+function countGroup(es) {
+  const c   = emptyCounters();
+  const now = Date.now();
+  es.forEach(e => {
+    const full = parseJournalTs(e.journal);
+    let seq = full.map(x => x.key);
+    if (!seq.length && e.status) seq = [e.status]; // фолбэк на текущий статус
+    c.total++;
+    let final      = seq[seq.length - 1] || '';
+    if (final === 'assigned' && e.autoCancel) final = 'cancel';  // авто-отмена просроченных
+    const hasMoved = seq.includes('moved');
+    const hasGtm   = seq.includes('given_tm');
+    if (seq.includes('confirmed') || final === 'confirmed') c.confirmedAny++;
+    if (final === 'done')   c.done++;
+    if (final === 'cancel') c.cancelAll++;
+    if (hasMoved) c.movedAny++;
+    if (hasGtm)   c.gtmAll++;
+    c.movesTotal += seq.filter(k => k === 'moved').length;
+
+    if (hasMoved) {
+      if (hasGtm) {
+        if      (final === 'cancel') c.mv_gtm_cancel++;
+        else if (final === 'done')   c.mv_gtm_done++;
+        else                          c.mv_gtm++;
+      } else {
+        if      (final === 'done')   c.mv_done++;
+        else if (final === 'cancel') c.mv_cancel++;
+      }
+    }
+
+    // ── Время (по таймстемпам журнала) ──
+    const firstTs = (full[0] && full[0].ts) ? full[0].ts.getTime() : entryStartMs(e);
+    if (final === 'done') {
+      const dEntry = [...full].reverse().find(x => x.key === 'done');
+      if (dEntry && dEntry.ts && firstTs != null) {
+        const d = (dEntry.ts.getTime() - firstTs) / DAY_MS;
+        if (d >= 0) { c.durDoneSum += d; c.durDoneN++; }
+      }
+    }
+    if (hasMoved) {
+      const mEntry = full.find(x => x.key === 'moved');
+      if (mEntry && mEntry.ts && firstTs != null) {
+        const d = (mEntry.ts.getTime() - firstTs) / DAY_MS;
+        if (d >= 0) { c.firstMoveSum += d; c.firstMoveN++; }
+      }
+    }
+
+    // ── Неявка (прокси): встреча в прошлом, не закрыта, статус назначена/подтверждена ──
+    const terminal = (final === 'done' || final === 'cancel');
+    if (!terminal) {
+      const mtgMs = e.date ? new Date(e.date + 'T23:59').getTime() : null;
+      if (mtgMs != null && mtgMs < now && (final === 'assigned' || final === 'confirmed' || final === '')) {
+        c.noShow++;
+      }
+      // "Висит дольше N дней" — незакрытая встреча, созданная давно
+      if (firstTs != null && (now - firstTs) / DAY_MS > HANG_DAYS) c.hang++;
+    }
+  });
+  return c;
+}
+
+// Суммируем массив счётчиков в один.
+function sumCounters(list) {
+  const T = emptyCounters();
+  list.forEach(c => Object.keys(T).forEach(k => T[k] += (c[k] || 0)));
+  return T;
 }
 
 function renderAnalytics() {
+  const wrap = document.getElementById('analytics-table');
+  if (!wrap) return;
+
   const ds      = getDates().map(dateKey);
-  const mgrList = getFilteredManagers();
   const entries = allEntries.filter(e => e.product === currentProduct && ds.includes(e.date));
+  const groups  = getReportGroups();
 
-  let html = '';
-  const totals = { cat1:0, cat2:0, cat3:0, cat4:0, cat5:0, cat6:0, all:0 };
+  // Данные по группам (колонки)
+  let cols = groups.map(g => ({ name: g.name, c: countGroup(entries.filter(g.filter)) }));
+  if (reportBreakdown !== 'mgr') cols = cols.filter(col => col.c.total > 0); // в разрезах прячем пустые
 
-  mgrList.forEach(mgr => {
-    const es = entries.filter(e => e.mgr === mgr.id);
-    const c  = { cat1:0, cat2:0, cat3:0, cat4:0, cat5:0, cat6:0 };
-    es.forEach(e => { if (e.category && c[e.category] !== undefined) c[e.category]++; });
-    const rowAll = c.cat1 + c.cat2 + c.cat3 + c.cat4 + c.cat5 + c.cat6;
+  // Итог по всем группам
+  const T = sumCounters(cols.map(col => col.c));
 
-    REPORT_CATS.forEach(rc => { totals[rc.key] += c[rc.key]; });
-    totals.all += rowAll;
+  // Предыдущий период (для стрелок динамики)
+  const prevDs  = getPrevDates().map(dateKey);
+  const prevAll = prevEntries.filter(e => e.product === currentProduct && prevDs.includes(e.date));
+  const P = countGroup(prevAll);
 
-    html += `<tr>
-      <td>${mgr.name}</td>
-      ${REPORT_CATS.map(rc => `<td class="right">${c[rc.key]}</td>`).join('')}
-      <td class="right"><b>${rowAll}</b></td>
-    </tr>`;
+  const pct  = (n, d) => d ? Math.round(n / d * 100) + '%' : '—';
+  const days = (sum, n) => n ? (sum / n).toFixed(1).replace('.', ',') + ' дн' : '—';
+  const delta = (cur, prev) => {
+    if (!prev && !cur) return '';
+    const d = cur - prev;
+    if (d === 0) return `<span class="dlt dlt-flat">→ 0</span>`;
+    return `<span class="dlt ${d>0?'dlt-up':'dlt-down'}">${d>0?'▲':'▼'} ${Math.abs(d)}</span>`;
+  };
+  const deltaPP = (cur, prev) => { // разница в процентных пунктах
+    const d = Math.round(cur*100) - Math.round(prev*100);
+    if (d === 0) return `<span class="dlt dlt-flat">→ 0 п.п.</span>`;
+    return `<span class="dlt ${d>0?'dlt-up':'dlt-down'}">${d>0?'▲':'▼'} ${Math.abs(d)} п.п.</span>`;
+  };
+
+  const recovered    = T.gtmAll ? T.mv_gtm_done : 0;
+  const doneRate     = T.total ? T.done / T.total : 0;
+  const prevDoneRate = P.total ? P.done / P.total : 0;
+
+  // ── Воронка + качество источника ──
+  const summary = `
+    <div class="funnel">
+      <div class="fn-card"><div class="fn-num">${T.total}</div><div class="fn-lbl">Всего назначено ${delta(T.total, P.total)}</div></div>
+      <div class="fn-arrow">→</div>
+      <div class="fn-card"><div class="fn-num">${T.confirmedAny} <span class="fn-pct">${pct(T.confirmedAny,T.total)}</span></div><div class="fn-lbl">Подтверждено</div></div>
+      <div class="fn-arrow">→</div>
+      <div class="fn-card ok"><div class="fn-num">${T.done} <span class="fn-pct">${pct(T.done,T.total)}</span></div><div class="fn-lbl">Проведено ${deltaPP(doneRate, prevDoneRate)}</div></div>
+      <div class="fn-card warn"><div class="fn-num">${T.gtmAll} <span class="fn-pct">${pct(T.gtmAll,T.total)}</span></div><div class="fn-lbl">Отдано в ТМ (всего)</div></div>
+      <div class="fn-card ok"><div class="fn-num">${recovered} <span class="fn-pct">${pct(recovered,T.gtmAll)}</span></div><div class="fn-lbl">Спасено из ТМ</div></div>
+      <div class="fn-card bad"><div class="fn-num">${T.cancelAll} <span class="fn-pct">${pct(T.cancelAll,T.total)}</span></div><div class="fn-lbl">Потеряно: отмена</div></div>
+    </div>
+    <div class="srcq">
+      <span class="srcq-lbl">Качество источника:</span>
+      ${srcQualityCard('От ТМ', entries.filter(e=>e.source==='tm'))}
+      ${srcQualityCard('Свои', entries.filter(e=>e.source==='own'))}
+    </div>`;
+  const sumEl = document.getElementById('funnel-summary');
+  if (sumEl) sumEl.innerHTML = T.total ? summary : '';
+
+  // ── Транспонированная таблица ──
+  if (!cols.length) {
+    wrap.innerHTML = '<div style="text-align:center;color:#aaa;padding:16px">Нет данных за период</div>';
+    setTimeout(fitBX24Window, 50);
+    return;
+  }
+
+  const colLabel = reportBreakdown === 'segment' ? 'Сегмент'
+                 : reportBreakdown === 'source'  ? 'Источник'
+                 : reportBreakdown === 'tm'      ? 'Телемаркетолог' : 'Менеджер ОП';
+  const avgDone  = doneRate;
+  const ncols    = cols.length + 2; // подпись + группы + Итого
+
+  // Загрузка слотов: рабочие дни периода × слоты 9–18
+  const workdays = getDates().filter(d => { const g = d.getDay(); return g >= 1 && g <= 5; }).length;
+  const availPer = Math.max(workdays, 1) * SLOTS.length;
+
+  const secRow = t => `<tr class="sec-row"><td colspan="${ncols}">${t}</td></tr>`;
+  // Универсальная строка: fmt(c) → <td> для группы; totFmt() → <td> "Итого".
+  const mrow = (label, title, fmt, totFmt, cls) => {
+    let h = `<tr class="${cls||''}"><td title="${title||''}">${label}</td>`;
+    cols.forEach(col => h += fmt(col.c));
+    h += totFmt();
+    return h + '</tr>';
+  };
+
+  let html = '<table class="an-table rep-t"><thead><tr>';
+  html += `<th>${colLabel}</th>`;
+  cols.forEach(col => html += `<th class="right">${escapeHtml(col.name)}</th>`);
+  html += '<th class="right gtotal">Итого</th></tr></thead><tbody>';
+
+  // ── Секция 1: Исходы встреч (шт) ──
+  html += secRow('Исходы встреч, шт');
+  REPORT_ROWS.forEach(r => {
+    const rowCls = r.kind === 'total' ? 'r-total' : (r.kind === 'done' ? 'r-done' : '');
+    if (r.kind === 'done') {
+      html += mrow(r.label, r.title,
+        c => { const rate=c.total?c.done/c.total:0; const cls=c.total<5?'':(rate>=avgDone*1.15?'cr-good':(rate<avgDone*0.7?'cr-low':'')); return `<td class="right ${cls}">${c.done||0}${c.total?` <small>${pct(c.done,c.total)}</small>`:''}</td>`; },
+        () => `<td class="right gtotal">${T.done} <small>${pct(T.done,T.total)}</small></td>`, rowCls);
+    } else if (r.kind === 'total') {
+      html += mrow(r.label, r.title, c => `<td class="right">${c.total||0}</td>`, () => `<td class="right gtotal">${T.total}</td>`, rowCls);
+    } else {
+      html += mrow(r.label, r.title, c => `<td class="right">${c[r.key]||''}</td>`, () => `<td class="right gtotal">${T[r.key]||''}</td>`, rowCls);
+    }
   });
 
-  html += `<tr class="total-row">
-    <td>Итого</td>
-    ${REPORT_CATS.map(rc => `<td class="right">${totals[rc.key]}</td>`).join('')}
-    <td class="right">${totals.all}</td>
-  </tr>`;
+  // ── Секция 2: Коэффициенты ──
+  html += secRow('Коэффициенты');
+  html += mrow('Доводимость %', 'Проведено / Всего назначено',
+    c => { const rate=c.total?c.done/c.total:0; const cls=c.total<5?'':(rate>=avgDone*1.15?'cr-good':(rate<avgDone*0.7?'cr-low':'')); return `<td class="right ${cls}">${pct(c.done,c.total)}</td>`; },
+    () => `<td class="right gtotal">${pct(T.done,T.total)}</td>`);
+  html += mrow('Подтверждено %', 'Доля встреч, дошедших до статуса Подтверждена',
+    c => `<td class="right">${pct(c.confirmedAny,c.total)}</td>`, () => `<td class="right gtotal">${pct(T.confirmedAny,T.total)}</td>`);
+  html += mrow('Переносы %', 'Доля встреч, где был хотя бы один перенос',
+    c => `<td class="right">${pct(c.movedAny,c.total)}</td>`, () => `<td class="right gtotal">${pct(T.movedAny,T.total)}</td>`);
+  html += mrow('Отмены %', 'Доля встреч с финальным статусом Отмена',
+    c => `<td class="right">${pct(c.cancelAll,c.total)}</td>`, () => `<td class="right gtotal">${pct(T.cancelAll,T.total)}</td>`);
+  html += mrow('Неявка / зависло %', 'Прокси: встреча в прошлом, статус Назначена/Подтверждена, не закрыта',
+    c => `<td class="right">${pct(c.noShow,c.total)}</td>`, () => `<td class="right gtotal">${pct(T.noShow,T.total)}</td>`);
+  html += mrow('Ср. переносов на встречу', 'Сумма переносов / число встреч',
+    c => `<td class="right">${c.total?(c.movesTotal/c.total).toFixed(2).replace('.',','):'—'}</td>`,
+    () => `<td class="right gtotal">${T.total?(T.movesTotal/T.total).toFixed(2).replace('.',','):'—'}</td>`);
 
-  const cols = REPORT_CATS.length + 2;
-  if (!mgrList.length) html = `<tr><td colspan="${cols}" style="text-align:center;color:#aaa;padding:16px">Нет данных</td></tr>`;
-  document.getElementById('analytics-body').innerHTML = html;
+  // ── Секция 3: Время ──
+  html += secRow('Время (из журнала статусов)');
+  html += mrow('Ср. срок: назначение → проведение', 'Средний срок от первой записи журнала до Проведено',
+    c => `<td class="right">${days(c.durDoneSum,c.durDoneN)}</td>`, () => `<td class="right gtotal">${days(T.durDoneSum,T.durDoneN)}</td>`);
+  html += mrow('Ср. время до 1-го переноса', 'Средний срок от назначения до первого переноса',
+    c => `<td class="right">${days(c.firstMoveSum,c.firstMoveN)}</td>`, () => `<td class="right gtotal">${days(T.firstMoveSum,T.firstMoveN)}</td>`);
+  html += mrow('Висит &gt; ' + HANG_DAYS + ' дн', 'Незакрытые встречи старше ' + HANG_DAYS + ' дней',
+    c => `<td class="right ${c.hang?'cr-low':''}">${c.hang||''}</td>`, () => `<td class="right gtotal">${T.hang||''}</td>`);
 
-  // Дадим DOM отрисоваться, затем растянем iframe под высоту содержимого
+  // ── Секция 4: Загрузка (только в разрезе по менеджерам) ──
+  if (reportBreakdown === 'mgr') {
+    html += secRow('Загрузка (' + SLOTS.length + ' слотов/день × ' + workdays + ' раб. дн)');
+    html += mrow('Занято слотов %', 'Встречи менеджера / доступные слоты за период',
+      c => { const u=c.total/availPer; const cls=u>1?'cr-low':(u<0.3?'cr-mid':''); return `<td class="right ${cls}">${Math.round(u*100)}%</td>`; },
+      () => `<td class="right gtotal">${Math.round(T.total/(availPer*cols.length)*100)}%</td>`);
+  }
+
+  html += '</tbody></table>';
+  wrap.innerHTML = html;
+
+  setTimeout(fitBX24Window, 50);
+}
+
+// Мини-карточка "качество источника" (блок под воронкой).
+function srcQualityCard(label, es) {
+  const c = countGroup(es);
+  const rate = c.total ? Math.round(c.done / c.total * 100) : 0;
+  return `<span class="srcq-card"><b>${label}</b>: ${c.total} встреч · ${c.done} провед. · <b>${c.total?rate+'%':'—'}</b> дов.</span>`;
+}
+
+// Даты предыдущего периода (для сравнения динамики).
+function getPrevDates() {
+  if (period === 'day') return [addDays(currentDate, -1)];
+  if (period === 'week') {
+    const s = new Date(currentDate), dow = s.getDay();
+    s.setDate(s.getDate() + (dow === 0 ? -6 : 1 - dow) - 7);
+    return Array.from({length:5}, (_,i) => addDays(s, i));
+  }
+  if (period === 'month') {
+    const y = currentDate.getFullYear(), m = currentDate.getMonth();
+    const days = new Date(y, m, 0).getDate();
+    return Array.from({length:days}, (_,i) => new Date(y, m-1, i+1));
+  }
+  if (period === 'quarter') {
+    const y = currentDate.getFullYear();
+    const q = Math.floor(currentDate.getMonth() / 3);
+    const start = new Date(y, (q-1)*3, 1), end = new Date(y, q*3, 0);
+    const arr = [];
+    for (let d = new Date(start); d <= end; d.setDate(d.getDate()+1)) arr.push(new Date(d));
+    return arr;
+  }
+  if (period === 'range' && dateFrom && dateTo) {
+    const len = Math.round((dateTo - dateFrom) / DAY_MS) + 1;
+    const e = addDays(dateFrom, -1);
+    const arr = [];
+    for (let i = len - 1; i >= 0; i--) arr.push(addDays(e, -i));
+    return arr;
+  }
+  return [addDays(currentDate, -1)];
+}
+
+// ════════════════════════════════════════════════
+//  ДЕКОМПОЗИЦИЯ ОП + ПЛАНЫ
+// ════════════════════════════════════════════════
+let decompSub      = 'report';   // 'report' | 'plans'
+let decompEntries  = [];         // встречи за весь месяц
+let decompMonthKey = '';         // какой месяц загружен в decompEntries
+let planMonth      = null;       // ОБЩИЙ план месяца { cr, workdays, _id }
+let dealsArrivedCache = {};      // { 'YYYY-MM': кол-во сделок, созданных в месяце }
+let planStorageMode = '';        // '' | 'b24' | 'local'
+
+function monthKeyOf(d){ return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0'); }
+function monthRange(d){ const y=d.getFullYear(), m=d.getMonth(); return [new Date(y,m,1), new Date(y,m+1,0)]; }
+function monthWorkdays(d){ const [s,e]=monthRange(d); const arr=[]; for(let x=new Date(s); x<=e; x.setDate(x.getDate()+1)){ const g=x.getDay(); if(g>=1&&g<=5) arr.push(new Date(x)); } return arr; }
+function workdaysInMonth(d){ return monthWorkdays(d).length; }
+
+// "Сделок пришло" за месяц = число сделок (crm.deal), созданных в месяце.
+// Это плановое кол-во назначенных встреч (общий план на весь ОП).
+async function getDealsArrived(mk){
+  if(dealsArrivedCache[mk] !== undefined) return dealsArrivedCache[mk];
+  const [s,e] = monthRange(currentDate);
+  try{
+    const d0 = await apiPage('crm.deal.list', {
+      filter: { '>=DATE_CREATE': dateKey(s)+'T00:00:00', '<=DATE_CREATE': dateKey(e)+'T23:59:59' },
+      select: ['ID'],
+    });
+    const total = (d0 && d0.total != null) ? d0.total : (Array.isArray(d0.result) ? d0.result.length : 0);
+    dealsArrivedCache[mk] = total;
+    log('📥 Сделок пришло за ' + mk + ': ' + total);
+    return total;
+  }catch(err){ log('⚠️ crm.deal.list (сделок пришло): ' + err.message); dealsArrivedCache[mk] = 0; return 0; }
+}
+
+// ── Хранилище планов: B24 entity API + фолбэк в localStorage ──
+const PLAN_ENTITY = 'sh_plans_v1';
+async function ensurePlanEntity(){
+  try{
+    const list = await apiOne('entity.get', {});
+    const has = Array.isArray(list) && list.some(x => String(x.ENTITY) === PLAN_ENTITY);
+    if(!has){
+      await apiOne('entity.add', { ENTITY: PLAN_ENTITY, NAME: 'Планы шахматки', ACCESS: { AU: 'W' } });
+      log('🗄️ Создано хранилище планов (entity ' + PLAN_ENTITY + ')');
+    }
+    planStorageMode = 'b24';
+  }catch(e){
+    planStorageMode = 'local';
+    log('⚠️ entity API недоступен (' + e.message + ') — планы храню в localStorage (не шарятся между людьми). Добавьте право "entity" вебхуку, чтобы планы стали общими.');
+  }
+}
+async function loadPlanForMonth(mk){
+  planMonth = null;
+  if(planStorageMode === 'b24'){
+    try{
+      const items = await apiOne('entity.item.get', { ENTITY: PLAN_ENTITY });
+      (Array.isArray(items) ? items : []).forEach(it => {
+        if(String(it.NAME) === 'PLAN|' + mk){
+          try{ const d = JSON.parse(it.DETAIL_TEXT || '{}'); d._id = it.ID; planMonth = d; }catch(e){}
+        }
+      });
+    }catch(e){ planStorageMode = 'local'; log('⚠️ entity.item.get: ' + e.message + ' — localStorage.'); }
+  }
+  if(!planMonth){
+    const raw = localStorage.getItem('sh_planmonth_' + mk);
+    if(raw){ try{ planMonth = JSON.parse(raw); }catch(e){} }
+  }
+  if(!planMonth) planMonth = { cr: 75, workdays: workdaysInMonth(currentDate) };
+}
+async function savePlanMonth(mk, data){
+  if(planStorageMode === 'b24'){
+    try{
+      if(data._id){ await apiOne('entity.item.update', { ENTITY: PLAN_ENTITY, ID: data._id, DETAIL_TEXT: JSON.stringify(data) }); }
+      else { const id = await apiOne('entity.item.add', { ENTITY: PLAN_ENTITY, NAME: 'PLAN|' + mk, DETAIL_TEXT: JSON.stringify(data) }); data._id = id; }
+      planMonth = data;
+      return 'b24';
+    }catch(e){ log('⚠️ Сохранение плана в B24: ' + e.message + ' — localStorage.'); }
+  }
+  localStorage.setItem('sh_planmonth_' + mk, JSON.stringify(data));
+  planMonth = data;
+  return 'local';
+}
+
+async function initDecompView(){
+  if(!planStorageMode) await ensurePlanEntity();
+  await loadPlanForMonth(monthKeyOf(currentDate));
+  if(decompSub === 'plans') renderPlans(); else renderDecomp();
+}
+
+function setDecompSub(sub, el){
+  decompSub = sub;
+  document.getElementById('ds-report').classList.toggle('active', sub === 'report');
+  document.getElementById('ds-plans').classList.toggle('active',  sub === 'plans');
+  document.getElementById('decomp-report').style.display = sub === 'report' ? '' : 'none';
+  document.getElementById('decomp-plans').style.display  = sub === 'plans'  ? '' : 'none';
+  if(sub === 'plans') renderPlans(); else renderDecomp();
+  setTimeout(fitBX24Window, 60);
+}
+
+function renderPlans(){
+  const p = planMonth || { cr: 75, workdays: workdaysInMonth(currentDate) };
+  document.getElementById('plan-cr').value = (p.cr != null ? p.cr : 75);
+  document.getElementById('plan-workdays').value = p.workdays || workdaysInMonth(currentDate);
+  renderPlanPreviewTable();
+  const st = document.getElementById('plan-status');
+  if(st) st.textContent = 'Хранилище: ' + (planStorageMode === 'b24' ? 'Б24 (общее для всех)' : 'localStorage (только этот браузер)');
+}
+
+async function renderPlanPreviewTable(){
+  const mk = monthKeyOf(currentDate);
+  const deals = await getDealsArrived(mk);
+  const cr = parseFloat(document.getElementById('plan-cr').value) || 0;
+  const done = Math.round(deals * cr / 100);
+  document.getElementById('plans-table').innerHTML =
+    '<thead><tr><th>Показатель (общий план на ОП)</th><th class="right">Значение на месяц</th></tr></thead><tbody>'
+    + `<tr><td>Назначенные встречи = сделок пришло (из Б24)</td><td class="right"><b>${deals}</b></td></tr>`
+    + `<tr><td>Целевой CR</td><td class="right">${cr}%</td></tr>`
+    + `<tr class="r-done"><td>План проведённых (= назначенные × CR)</td><td class="right"><b>${done}</b></td></tr>`
+    + '</tbody>';
+}
+
+function recalcPlanPreview(){ renderPlanPreviewTable(); }
+
+function savePlanFromForm(){
+  const mk = monthKeyOf(currentDate);
+  const data = {
+    cr: parseFloat(document.getElementById('plan-cr').value) || 0,
+    workdays: parseInt(document.getElementById('plan-workdays').value) || workdaysInMonth(currentDate),
+  };
+  if(planMonth && planMonth._id) data._id = planMonth._id;
+  const btn = document.getElementById('btn-save-plan'); btn.disabled = true; btn.textContent = 'Сохранение...';
+  savePlanMonth(mk, data).then(mode => {
+    btn.disabled = false; btn.textContent = 'Сохранить план';
+    const st = document.getElementById('plan-status');
+    if(st) st.textContent = 'Сохранено (' + (mode === 'b24' ? 'Б24' : 'localStorage') + ') ' + new Date().toLocaleTimeString('ru-RU');
+    log('💾 План месяца сохранён: ' + mk + ' cr=' + data.cr + ' → ' + mode);
+    renderDecomp();
+  });
+}
+
+async function renderDecomp(){
+  const wrap = document.getElementById('decomp-table'); if(!wrap) return;
+  const mk = monthKeyOf(currentDate);
+  const lbl = document.getElementById('decomp-month-lbl');
+  if(lbl) lbl.textContent = '· ' + currentDate.toLocaleDateString('ru-RU', {month:'long', year:'numeric'});
+
+  wrap.innerHTML = '<div style="text-align:center;color:#aaa;padding:16px">Загрузка...</div>';
+
+  if(decompMonthKey !== mk){
+    const [s,e] = monthRange(currentDate);
+    try{ decompEntries = await loadEntries(dateKey(s), dateKey(e)); }catch(err){ decompEntries = []; }
+    await loadPlanForMonth(mk);
+    decompMonthKey = mk;
+  } else if(!planMonth){
+    await loadPlanForMonth(mk);
+  }
+
+  const dealsArrived = await getDealsArrived(mk);
+
+  const days = monthWorkdays(currentDate);
+  const today = new Date(); today.setHours(23,59,59,999);
+  const dayIndex = {}; days.forEach((d,i) => dayIndex[dateKey(d)] = i);
+
+  const mgrs = getFilteredManagers().map(m => String(m.id));
+  const mgrSet = new Set(mgrs);
+
+  // ── ОБЩИЙ план на весь ОП ──
+  const cr = (planMonth && planMonth.cr != null) ? planMonth.cr : 75;
+  const wd = (planMonth && planMonth.workdays) || workdaysInMonth(currentDate);
+  const planAssignedTotal = dealsArrived;                       // сделок пришло
+  const planDoneTotal     = Math.round(planAssignedTotal * cr / 100);
+  const planACum = i => Math.round(planAssignedTotal * Math.min(i+1, wd) / wd);
+  const planDCum = i => Math.round(planDoneTotal * Math.min(i+1, wd) / wd);
+
+  const es = decompEntries.filter(e => e.product === currentProduct && (!mgrs.length || mgrSet.has(String(e.mgr))));
+
+  const fmtCol = d => String(d.getDate()).padStart(2,'0') + '.' + String(d.getMonth()+1).padStart(2,'0');
+  const pctv = (n,dn) => dn ? Math.round(n/dn*100) + '%' : '';
+  const isFuture = d => d.getTime() > today.getTime();
+  const ncol = days.length + 2;
+
+  let html = '<table class="an-table rep-t"><thead><tr><th>Показатель</th>';
+  days.forEach(d => html += `<th class="right">${fmtCol(d)}<br><span style="font-weight:400;font-size:10px">${['вс','пн','вт','ср','чт','пт','сб'][d.getDay()]}</span></th>`);
+  html += '<th class="right gtotal">Итого</th></tr></thead><tbody>';
+
+  // ── План (общий) ──
+  html += `<tr class="sec-row"><td colspan="${ncol}">План по назначенным и проведённым встречам · назн ${planAssignedTotal} (сделок пришло) / пров ${planDoneTotal} / CR ${cr}%</td></tr>`;
+  html += '<tr class="dec-plan"><td>Назначенные встречи (нарастающим)</td>';
+  days.forEach((d,i) => html += `<td class="decd">${planACum(i)}</td>`);
+  html += `<td class="right gtotal">${planAssignedTotal}</td></tr>`;
+  html += '<tr class="dec-plan"><td>Проведённые встречи (нарастающим)</td>';
+  days.forEach((d,i) => html += `<td class="decd">${planDCum(i)}</td>`);
+  html += `<td class="right gtotal">${planDoneTotal}</td></tr>`;
+  html += '<tr class="dec-plan"><td>CR (план)</td>';
+  days.forEach(() => html += `<td class="decd">${cr}%</td>`);
+  html += `<td class="right gtotal">${cr}%</td></tr>`;
+
+  // ── Факт-блоки: ТМ (полный) и Свои (короткий). План общий; отклонения ТМ считаются к нему. ──
+  const blocks = [
+    { name:'Встреч от ТМ', match: e => e.source === 'tm',  rows:['a_day','a_cum','a_dev','d_day','d_cum','d_dev','cr','cr_dev','cr_wk'] },
+    { name:'Встреч Своих', match: e => e.source === 'own', rows:['a_day','a_cum','d_day','d_cum','cr'] },
+  ];
+  const LABELS = {
+    a_day:'Назначенные встречи (день в день)',
+    a_cum:'Назначенные встречи (нарастающим итогом)',
+    a_dev:'Отклонение',
+    d_day:'Проведённые встречи (день в день)',
+    d_cum:'Проведённые встречи (нарастающим итогом)',
+    d_dev:'Отклонение',
+    cr:'CR',
+    cr_dev:'Отклонение CR (п.п.)',
+    cr_wk:'CR недельный',
+  };
+
+  blocks.forEach(b => {
+    const A = days.map(()=>0), D = days.map(()=>0);
+    es.forEach(e => {
+      if(!b.match(e)) return;
+      const i = dayIndex[e.date]; if(i === undefined) return;
+      A[i]++;
+      const seq = parseJournal(e.journal); const final = seq.length ? seq[seq.length-1] : e.status;
+      if(final === 'done') D[i]++;
+    });
+    const aCum = [], dCum = []; let aC = 0, dC = 0;
+    days.forEach((d,i) => { aC += A[i]; dC += D[i]; aCum.push(aC); dCum.push(dC); });
+    let wkc = 0; const weekIdx = days.map((d,i) => { if(i>0 && d.getDay()===1) wkc++; return wkc; });
+
+    html += `<tr class="sec-row"><td colspan="${ncol}">Факт: ${b.name}</td></tr>`;
+    b.rows.forEach(k => {
+      html += `<tr><td>${LABELS[k]}</td>`;
+      days.forEach((d,i) => {
+        const fut = isFuture(d);
+        let val = '', cls = 'decd';
+        if(k === 'a_day')      val = fut ? '' : (A[i] || 0);
+        else if(k === 'a_cum') val = fut ? '' : aCum[i];
+        else if(k === 'd_day') val = fut ? '' : (D[i] || 0);
+        else if(k === 'd_cum') val = fut ? '' : dCum[i];
+        else if(k === 'a_dev'){ if(!fut){ const dev = aCum[i] - planACum(i); val = dev; cls += dev < 0 ? ' dec-dev-neg' : ' dec-dev-pos'; } }
+        else if(k === 'd_dev'){ if(!fut){ const dev = dCum[i] - planDCum(i); val = dev; cls += dev < 0 ? ' dec-dev-neg' : ' dec-dev-pos'; } }
+        else if(k === 'cr'){ if(!fut){ val = pctv(dCum[i], aCum[i]); cls += ' dec-cr'; } }
+        else if(k === 'cr_dev'){ if(!fut && aCum[i]){ const dev = Math.round(dCum[i]/aCum[i]*100) - cr; val = dev + '%'; cls += dev < 0 ? ' dec-dev-neg' : ' dec-dev-pos'; } }
+        else if(k === 'cr_wk'){ if(!fut){ const wk = weekIdx[i]; let aw = 0, dw = 0; for(let j=0;j<=i;j++){ if(weekIdx[j]===wk){ aw += A[j]; dw += D[j]; } } val = aw ? pctv(dw, aw) : ''; cls += ' dec-cr'; } }
+        if(fut) cls += ' future';
+        html += `<td class="${cls}">${val === '' ? '' : val}</td>`;
+      });
+      const lastA = aCum[days.length-1] || 0, lastD = dCum[days.length-1] || 0;
+      let tv = '';
+      if(k === 'a_day' || k === 'a_cum') tv = lastA;
+      else if(k === 'd_day' || k === 'd_cum') tv = lastD;
+      else if(k === 'a_dev') tv = lastA - planAssignedTotal;
+      else if(k === 'd_dev') tv = lastD - planDoneTotal;
+      else if(k === 'cr') tv = pctv(lastD, lastA);
+      else if(k === 'cr_dev') tv = lastA ? (Math.round(lastD/lastA*100) - cr) + '%' : '';
+      html += `<td class="right gtotal">${tv}</td></tr>`;
+    });
+  });
+  html += '</tbody></table>';
+  wrap.innerHTML = html;
   setTimeout(fitBX24Window, 50);
 }
 
 // ════════════════════════════════════════════════
 //  МОДАЛКА
 // ════════════════════════════════════════════════
-// Строит <option> для менеджеров. Если у уже назначенного менеджера selectedId
-// нет в отфильтрованном по сегменту списке — всё равно добавляем его отдельной
-// пометкой, чтобы смена сегмента не "съедала" существующее назначение молча.
 function buildMgrOptions(list, selectedId) {
   const base = list.slice();
   if (selectedId && !base.find(m => m.id === String(selectedId))) {
@@ -1322,8 +1913,6 @@ function buildMgrOptions(list, selectedId) {
   ).join('');
 }
 
-// Меняем список менеджеров ОП при выборе/смене сегмента в модалке.
-// Текущий выбранный менеджер сохраняется (см. buildMgrOptions).
 function onSegmentChange() {
   const segVal   = document.getElementById('m-segment').value;
   const filtered = managersForSegmentValue(segVal);
@@ -1335,11 +1924,6 @@ function onSegmentChange() {
   }
 }
 
-// Можно ли редактировать встречу:
-//  - новую (нет entry) — всегда можно;
-//  - если не знаем текущего пользователя (BX24 не дал) — не ограничиваем;
-//  - админ — всё можно;
-//  - иначе: только если встреча на мне (menedжер/ответственный) ИЛИ я её создал.
 function canEditEntry(entry) {
   if (!entry) return true;
   if (!currentUserId) return true;      // нет данных о юзере → не блокируем
@@ -1348,7 +1932,6 @@ function canEditEntry(entry) {
   return entry.mgr === me || entry.assigned === me || entry.creator === me;
 }
 
-// Включает/выключает поля модалки в зависимости от прав.
 function applyEditableState(editable) {
   const ids = ['m-product','m-segment','m-mgr','m-date','m-time','m-source','m-tm','m-client','m-status'];
   ids.forEach(id => {
@@ -1361,7 +1944,6 @@ function applyEditableState(editable) {
   if (note) note.style.display = editable ? 'none' : 'block';
 }
 
-// Открыть карточку лида/сделки в Б24 (из модалки).
 function openEntityCard() {
   if (!modalEntityId) return;
   const path = (modalEntityType === 'deal' ? '/crm/deal/details/' : '/crm/lead/details/') + modalEntityId + '/';
@@ -1371,7 +1953,6 @@ function openEntityCard() {
       return;
     }
   } catch (e) { /* fallthrough */ }
-  // Фолбэк: открыть напрямую по домену портала
   const domain = (typeof BX24 !== 'undefined' && BX24.getDomain) ? BX24.getDomain() : 'crm.seller24.ru';
   window.open('https://' + domain + path, '_blank');
 }
@@ -1387,13 +1968,13 @@ function openModal(id, mgrId, slot, date) {
   document.getElementById('m-segment').innerHTML = '<option value="">— не указана —</option>' +
     segmentFieldItems.map(i => `<option value="${i.id}">${i.label}</option>`).join('');
 
+  const _pad = t => { const p = String(t || '9:00').split(':'); return String(p[0]).padStart(2,'0') + ':' + String(p[1] || '00').padStart(2,'0'); };
   document.getElementById('m-date').value = date;
-  document.getElementById('m-time').value = slot.slice(0, 5);
+  document.getElementById('m-time').value = _pad(slot);
   updateDateTimePreview();
   document.getElementById('m-product').value  = currentProduct;
   document.getElementById('modal-title').textContent = id ? 'Редактировать встречу' : 'Новая встреча';
 
-  // Показать инфо о лиде/сделке если есть контекст + сделать ссылку кликабельной
   const leadInfo = document.getElementById('lead-id-info');
   const activeLeadId = id || currentLeadId;
   const e0 = id ? allEntries.find(x => x.id === id) : null;
@@ -1409,7 +1990,6 @@ function openModal(id, mgrId, slot, date) {
     modalEntityId = null;
   }
 
-  // Права: чужую встречу можно только смотреть.
   const editable = canEditEntry(e0);
   applyEditableState(editable);
 
@@ -1422,20 +2002,16 @@ function openModal(id, mgrId, slot, date) {
       document.getElementById('m-client').value  = e.client || '';
       document.getElementById('m-status').value  = e.status || 'assigned';
       document.getElementById('m-product').value = e.product || 'accounting';
+      if (e.time) document.getElementById('m-time').value = _pad(e.time);
       if (e.tm) document.getElementById('m-tm').value = e.tm;
       document.getElementById('m-segment').value = e.segment || '';
     }
     onSegmentChange();
   } else {
-    // Новый слот
     document.getElementById('m-source').value = currentLeadId ? 'tm' : 'tm';
     document.getElementById('m-client').value = '';
-
-    // 1) Первое приближение: сегмент из тулбара, если выбран.
-    //    Если у привязанного лида окажется другой — перезапишем ниже.
     document.getElementById('m-segment').value = activeSegmentId || '';
 
-    // 2) Если открыто из карточки лида — подтягиваем название и сегмент лида.
     if (currentLeadId) {
       apiOne('crm.lead.get', { id: parseInt(currentLeadId) })
         .then(lead => {
@@ -1455,18 +2031,10 @@ function openModal(id, mgrId, slot, date) {
   }
   toggleTM();
 
-  // Внутри iframe Б24 position:fixed и 100vh считаются от ВЫСОТЫ IFRAME,
-  // а не окна браузера. Мы растягиваем iframe под сетку (~1500px), поэтому
-  // модалка-оверлей уходит вниз за видимую область и кнопка "Сохранить"
-  // становится недоступной. Перед показом модалки временно сжимаем iframe
-  // до высоты окна Б24 (scrollWindow к верху), чтобы оверлей встал по центру
-  // видимой части. При закрытии — возвращаем полную высоту через fitBX24Window().
   try {
     if (typeof BX24 !== 'undefined') {
       if (typeof BX24.scrollParentWindow === 'function') BX24.scrollParentWindow(0);
       if (typeof BX24.resizeWindow === 'function') {
-        // Высота видимой области родительского окна недоступна напрямую,
-        // берём разумный максимум ~ высоту экрана.
         const vh = Math.min(window.screen.availHeight || 900, 900);
         BX24.resizeWindow(document.body.scrollWidth, vh);
       }
@@ -1500,7 +2068,6 @@ function toggleTM() {
 }
 function closeModal() {
   document.getElementById('modal-bg').classList.remove('open');
-  // Возвращаем полную высоту iframe под сетку
   setTimeout(fitBX24Window, 50);
 }
 document.getElementById('modal-bg').addEventListener('click', e => {
@@ -1516,21 +2083,22 @@ function setView(v) {
   currentView = v;
   document.getElementById('view-grid').style.display   = v === 'grid'   ? '' : 'none';
   document.getElementById('view-report').style.display = v === 'report' ? '' : 'none';
+  document.getElementById('view-decomp').style.display = v === 'decomp' ? '' : 'none';
   document.getElementById('vs-grid').classList.toggle('active',   v === 'grid');
   document.getElementById('vs-report').classList.toggle('active', v === 'report');
+  document.getElementById('vs-decomp').classList.toggle('active', v === 'decomp');
 
-  // В "Шахматке" нет квартала — прячем кнопку. В "Отчёте" — показываем.
   const qBtn = document.querySelector('#period-tabs [data-period="quarter"]');
   if (qBtn) qBtn.style.display = (v === 'grid') ? 'none' : '';
 
-  // Если переключились на Шахматку, а был выбран Квартал — откатываем на Месяц.
   if (v === 'grid' && period === 'quarter') {
     const mBtn = document.querySelector('#period-tabs [data-period="month"]');
     if (mBtn) setPeriod('month', mBtn);
   }
 
-  // Перерисовываем активный раздел и подгоняем высоту iframe
-  if (v === 'grid') renderGrid(); else renderAnalytics();
+  if (v === 'grid') renderGrid();
+  else if (v === 'report') renderAnalytics();
+  else if (v === 'decomp') initDecompView();
   setTimeout(fitBX24Window, 60);
 }
 
@@ -1541,7 +2109,10 @@ function setProduct(prod) {
   const badge = document.getElementById('analytics-badge');
   badge.textContent = prod === 'accounting' ? 'Аккаунтинг' : 'Платформа';
   badge.className   = 'product-badge ' + (prod==='accounting' ? 'badge-acc' : 'badge-plat');
+  const dbadge = document.getElementById('decomp-badge');
+  if (dbadge) { dbadge.textContent = badge.textContent; dbadge.className = badge.className; }
   renderGrid(); renderAnalytics();
+  if (currentView === 'decomp') renderDecomp();
 }
 
 function setPeriod(p, el) {
@@ -1586,13 +2157,12 @@ function setStatus(msg, type='') {
   el.className   = 'status-bar' + (type ? ' '+type : '');
 }
 
-const BUILD_VERSION = 'shahmatka build 2026-07-03 #20 (journal-field-set)';
+const BUILD_VERSION = 'shahmatka build 2026-07-29 #34 (новое поле статуса UF_CRM_SH_MSTATUS + журнал)';
 
 function log(msg) {
   const b = document.getElementById('debug-box');
   b.style.display = 'block';
   b.innerHTML += msg + '<br>';
-  // Не даём логу бесконечно расти: держим последние ~400 строк
   const lines = b.innerHTML.split('<br>');
   if (lines.length > 400) b.innerHTML = lines.slice(-400).join('<br>');
 }
@@ -1601,16 +2171,13 @@ let usersLoaded = false;
 
 async function loadData(forceReloadUsers=false) {
   setStatus('Загрузка...', 'loading');
-  // ВНИМАНИЕ: лог здесь больше НЕ очищаем — иначе стираются строки о загрузке
-  // отделов/сегментов (они пишутся параллельно при старте).
+  if (forceReloadUsers) decompMonthKey = '';   // заставить декомпозицию перечитать месяц
 
   const dates = getDates();
   const from  = dateKey(dates[0]);
   const to    = dateKey(dates[dates.length - 1]);
 
   // ── 1. МГНОВЕННАЯ ОТРИСОВКА ИЗ КЭША ──
-  // Если в localStorage уже есть юзеры и лиды — рендерим прямо сейчас,
-  // не дожидаясь сети. Свежие данные подгрузим в фоне.
   const cachedUsers = !forceReloadUsers && cacheGet('sh_users', 60 * 60 * 1000);
   const cachedLeads = !forceReloadUsers && cacheGet('sh_leads_' + from + '_' + to, 90 * 1000);
 
@@ -1647,8 +2214,17 @@ async function loadData(forceReloadUsers=false) {
       allEntries = (await loadEntries(from, to, forceReloadUsers)) || [];
     }
 
-    // Если открыты из карточки лида/сделки и серверный фильтр его не вернул —
-    // подтянем его явно. Иначе встреча у этого лида не появится в сетке.
+    // Предыдущий период — для стрелок динамики в отчёте (фоново, не критично).
+    try {
+      const pv = getPrevDates();
+      const pf = dateKey(pv[0]);
+      const pt = dateKey(pv[pv.length - 1]);
+      prevEntries = (await loadEntries(pf, pt, forceReloadUsers)) || [];
+    } catch (e) {
+      prevEntries = [];
+      log('⚠️ Предыдущий период не загружен: ' + e.message);
+    }
+
     if (currentLeadId) {
       try {
         const lead = await apiOne('crm.lead.get', { id: parseInt(currentLeadId) });
@@ -1664,19 +2240,15 @@ async function loadData(forceReloadUsers=false) {
             const mapped = mapLead(lead);
             log('   → mapped: date=' + mapped.date + ', slot=' + mapped.slot + ', mgr=' + mapped.mgr + ', product=' + mapped.product + ', status=' + mapped.status);
 
-            // Проверяем что менеджер есть в списке managers
             const mgrInList = managers.find(m => m.id === mapped.mgr);
             if (!mgrInList) {
               log('⚠️ Менеджер #' + mapped.mgr + ' НЕ в отделе ОП. Добавлю его в сетку временно.');
-              // Подгружаем данные пользователя и добавляем в managers
               try {
-                // user.get с FILTER возвращает массив — берём первый элемент
                 const result = await apiAll('user.get', { FILTER: { ID: mapped.mgr } });
                 const u = (Array.isArray(result) && result.length) ? result[0] : null;
                 const userName = u ? ((u.NAME || '') + ' ' + (u.LAST_NAME || '')).trim() : '';
                 const displayName = userName || ('Пользователь #' + mapped.mgr);
                 managers.push({ id: mapped.mgr, name: displayName + ' (вне отдела ОП)' });
-                // Обновляем выпадающий список
                 const sel = document.getElementById('mgr-filter');
                 if (sel) {
                   sel.innerHTML = '<option value="">Все менеджеры</option>' +
@@ -1691,15 +2263,10 @@ async function loadData(forceReloadUsers=false) {
               log('✅ Менеджер: ' + mgrInList.name);
             }
 
-            // Добавляем в allEntries (или обновляем существующий)
             allEntries = allEntries.filter(e => e.id !== currentLeadId);
             allEntries.push(mapped);
             log('🎯 Лид добавлен в сетку. Всего entries: ' + allEntries.length);
 
-            // Автоматически переключаем шахматку на день этой встречи —
-            // но ТОЛЬКО при первом открытии карточки. После сохранения (в т.ч.
-            // на другой день) loadData вызывается снова, и повторный прыжок
-            // ломал навигацию (кидало на дату встречи без возможности вернуться).
             if (!autoJumpDone) {
               const todayKey = dateKey(currentDate);
               if (mapped.date && mapped.date !== todayKey) {
@@ -1711,15 +2278,12 @@ async function loadData(forceReloadUsers=false) {
               autoJumpDone = true;
             }
 
-            // Проверяем что продукт совпадает с выбранным
             if (mapped.product !== currentProduct) {
               log('⚠️ Продукт лида (' + mapped.product + ') ≠ выбранный (' + currentProduct + '). Переключаюсь на продукт лида.');
               currentProduct = mapped.product;
               document.querySelectorAll('.tab-product').forEach(b => b.classList.toggle('active', b.dataset.product === currentProduct));
             }
 
-            // Если у лида заполнена сегментация — включаем соответствующий фильтр
-            // сетки, чтобы показать слоты только нужного отдела.
             if (mapped.segment) {
               activeSegmentId = mapped.segment;
               const segSel = document.getElementById('segment-filter');
@@ -1739,18 +2303,17 @@ async function loadData(forceReloadUsers=false) {
     log('❌ loadData: ' + e.message);
     if (!Array.isArray(allEntries)) allEntries = [];
   } finally {
-    // Сетка показывается ВСЕГДА, даже при ошибке или пустых данных
     document.getElementById('grid-loader').style.display = 'none';
     document.getElementById('grid').style.display = '';
     renderGrid();
     renderAnalytics();
+    if (currentView === 'decomp') renderDecomp();
   }
 }
 
 function clearLead() {
   currentLeadId = null;
   document.getElementById('lead-banner').style.display = 'none';
-  // Сбрасываем фильтр по сегменту, который мог быть выставлен автоматически из лида
   activeSegmentId = '';
   const segSel = document.getElementById('segment-filter');
   if (segSel) segSel.value = '';
@@ -1761,17 +2324,14 @@ function clearLead() {
 // ════════════════════════════════════════════════
 //  ПРИВЯЗКА ВКЛАДКИ К ЛИДУ/СДЕЛКЕ (placement.bind)
 // ════════════════════════════════════════════════
-// Адрес, по которому открыта эта же шахматка (страница приложения)
 const HANDLER_URL = window.location.origin + window.location.pathname;
 const PLACEMENTS  = [
-  'CRM_LEAD_DETAIL_TAB',   // вкладка в карточке лида
-  'CRM_DEAL_DETAIL_TAB',   // вкладка в карточке сделки
-  'CRM_LEAD_LIST_MENU',    // пункт контекстного меню в списке лидов
-  'CRM_DEAL_LIST_MENU',    // пункт контекстного меню в списке сделок
+  'CRM_LEAD_DETAIL_TAB',
+  'CRM_DEAL_DETAIL_TAB',
+  'CRM_LEAD_LIST_MENU',
+  'CRM_DEAL_LIST_MENU',
 ];
 
-// Грузим BX24.js асинхронно, в фоне — чтобы НЕ блокировать загрузку
-// шахматки, если api.bitrix24.com недоступен/медленный.
 function loadBX24() {
   return new Promise((resolve, reject) => {
     if (typeof BX24 !== 'undefined') return resolve();
@@ -1795,8 +2355,6 @@ async function checkPlacements() {
   BX24.init(async function () {
     fitBX24Window();
 
-    // 0. Определяем текущего залогиненного пользователя (для прав на редактирование).
-    //    Через BX24 (OAuth-контекст), а не через вебхук — вебхук вернул бы владельца.
     try {
       BX24.callMethod('user.current', {}, function (res) {
         if (!res.error()) {
@@ -1813,8 +2371,6 @@ async function checkPlacements() {
       log('⚠️ user.current: ' + e.message);
     }
 
-    // 1. Определяем, из какой карточки открыта вкладка (лид/сделка),
-    //    и подтягиваем нужный лид автоматически.
     try {
       const info = BX24.placement.info();
       log('📍 Placement: ' + info.placement + (info.options ? ' ' + JSON.stringify(info.options) : ''));
@@ -1845,7 +2401,6 @@ async function checkPlacements() {
       log('⚠️ placement.info: ' + e.message);
     }
 
-    // 2. Проверяем, привязана ли вкладка к карточкам лида/сделки
     BX24.callMethod('placement.get', {}, function (result) {
       if (result.error()) { log('⚠️ placement.get: ' + JSON.stringify(result.error())); return; }
       const bound = (result.data() || []).map(p => p.placement);
@@ -1853,7 +2408,6 @@ async function checkPlacements() {
       if (missing.length) {
         log('🔧 Не привязано: ' + missing.join(', ') + ' — привязываю автоматически...');
         document.getElementById('placement-banner').style.display = 'block';
-        // Автоматический вызов привязки
         registerPlacements();
       } else {
         log('✅ Все placement привязаны: ' + bound.join(', '));
@@ -1862,12 +2416,9 @@ async function checkPlacements() {
   });
 }
 
-// Прямые REST вызовы к вебхуку (минуя BX24.js) — на случай если BX24 виснет.
-// ВАЖНО: у вебхука должно быть право "Встраивание приложений (placement)".
 const WEBHOOK_URL = 'https://crm.seller24.ru/rest/5/9yr3u419ap9cvzn7';
 
 function bindOne(placement) {
-  // Пробуем через BX24 с таймаутом 8 сек; если не отвечает — fallback на webhook
   return new Promise(async resolve => {
     let done = false;
     const timer = setTimeout(async () => {
@@ -1948,8 +2499,6 @@ async function registerPlacements() {
   }
 }
 
-// Если открыты из карточки сделки — подтягиваем связанный с ней лид
-// через webhook (не BX24, который может не работать)
 async function autoLinkDealToLead() {
   if (!currentDealId || currentLeadId) return;
   try {
@@ -1977,16 +2526,13 @@ function showLeadBanner() {
   banner.style.display = 'block';
   const titleEl = document.getElementById('lead-banner-title');
 
-  // Сначала показываем просто номер, потом подгружаем название
   titleEl.textContent = 'Лид #' + currentLeadId;
 
-  // Делаем кликабельным — открывает карточку лида в Б24
   const domain = currentDomain || (location.hostname.endsWith('seller24.ru') ? location.hostname : 'crm.seller24.ru');
   const leadUrl = 'https://' + domain + '/crm/lead/details/' + currentLeadId + '/';
 
   banner.style.cursor = 'pointer';
   banner.onclick = () => {
-    // Открываем в верхнем окне (выходим из iframe), либо в новой вкладке как fallback
     try {
       if (window.top && window.top !== window.self) {
         window.top.location.href = leadUrl;
@@ -1998,7 +2544,6 @@ function showLeadBanner() {
     }
   };
 
-  // Подтягиваем название лида
   apiOne('crm.lead.get', { id: parseInt(currentLeadId) }).then(lead => {
     if (lead && lead.TITLE) {
       titleEl.innerHTML = '<u>Лид #' + currentLeadId + ' — ' + escapeHtml(lead.TITLE) + '</u> <small>(открыть карточку)</small>';
@@ -2012,7 +2557,6 @@ function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 
-// Открывает карточку лида в Б24 (используется при ПКМ на ячейке)
 function openLeadCard(leadId) {
   const domain = currentDomain || (location.hostname.endsWith('seller24.ru') ? location.hostname : 'crm.seller24.ru');
   const url = 'https://' + domain + '/crm/lead/details/' + leadId + '/';
@@ -2030,9 +2574,6 @@ function openLeadCard(leadId) {
 if (currentLeadId) showLeadBanner();
 if (currentDealId && !currentLeadId) autoLinkDealToLead();
 
-// «Обновить» в тулбаре: сбрасываем все динамические данные с force=true —
-// заново тянем сегменты и отделы (важно, если поменялся состав отделов Б24 или
-// значения списка), а не только встречи.
 async function reloadAll() {
   log('↻ Полное обновление (сегменты + отделы + пользователи + лиды)...');
   await Promise.all([
@@ -2046,9 +2587,6 @@ async function reloadAll() {
   renderAnalytics();
 }
 
-// Полная очистка локального кэша шахматки + перезагрузка страницы.
-// Используется когда в кэше застряли протухшие данные (например, до фикса
-// отделы закэшировались пустыми и мешают увидеть свежий результат).
 function clearAllCache() {
   try {
     const keys = [];
@@ -2061,7 +2599,6 @@ function clearAllCache() {
   } catch (e) {
     log('⚠️ clearAllCache: ' + e.message);
   }
-  // Перезагружаем страницу с игнором HTTP-кэша, чтобы точно взять свежий HTML/JS
   location.reload();
 }
 
@@ -2069,8 +2606,6 @@ checkPlacements();
 log('🔧 ' + BUILD_VERSION);
 setView('grid'); // стартуем на Шахматке; прячем Квартал
 Promise.all([loadSegmentField(), loadSegmentDepartments()]).then(() => {
-  // Данные о сегментах/отделах могли подгрузиться уже после первого рендера сетки —
-  // перерисовываем, чтобы фильтр по сегменту (если он выставлен) применился.
   renderGrid();
   renderAnalytics();
 });
