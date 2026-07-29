@@ -645,12 +645,19 @@ function cacheSet(key, data) {
 // ════════════════════════════════════════════════
 //  ПОЛЬЗОВАТЕЛИ
 // ════════════════════════════════════════════════
+// Доп. менеджеры, которых всегда показываем в сетке (напр., для тестирования).
+const EXTRA_MANAGERS = [{ id: '5', name: 'Валерия Кирпичникова (тест)' }];
+function addExtraManagers() {
+  EXTRA_MANAGERS.forEach(x => { if (!managers.find(m => m.id === x.id)) managers.push(x); });
+}
+
 async function loadUsers(force = false) {
   try {
     const cached = !force && cacheGet('sh_users', 60 * 60 * 1000);
     if (cached) {
       managers = cached.managers;
       tms      = cached.tms;
+      addExtraManagers();
       log('👥 Менеджеры: ' + managers.length + '  📞 ТМ: ' + tms.length + ' (кэш)');
       const sel = document.getElementById('mgr-filter');
       if (sel) {
@@ -669,6 +676,7 @@ async function loadUsers(force = false) {
     const toUser = u => ({ id: String(u.ID), name: (u.NAME + ' ' + u.LAST_NAME).trim() });
     managers = listOP.map(toUser);
     tms      = listTM.map(toUser);
+    addExtraManagers();
     cacheSet('sh_users', { managers, tms });
     log('👥 Менеджеры: ' + managers.length + '  📞 ТМ: ' + tms.length);
 
@@ -2240,7 +2248,7 @@ function setStatus(msg, type='') {
   el.className   = 'status-bar' + (type ? ' '+type : '');
 }
 
-const BUILD_VERSION = 'shahmatka build 2026-07-29 #36 (событие в календарь менеджера + все встречи в сетке)';
+const BUILD_VERSION = 'shahmatka build 2026-07-29 #37 (тест-менеджер ID 5 в сетке)';
 
 function log(msg) {
   const b = document.getElementById('debug-box');
@@ -2267,6 +2275,7 @@ async function loadData(forceReloadUsers=false) {
   if (cachedUsers && cachedLeads) {
     managers = cachedUsers.managers;
     tms      = cachedUsers.tms;
+    addExtraManagers();
     const sel = document.getElementById('mgr-filter');
     if (sel) {
       const cur = sel.value;
