@@ -107,6 +107,16 @@ td.slot.current-lead-slot{background:var(--blue-100)}
 /* Секции-подзаголовки внутри отчёта */
 .rep-t tr.sec-row td{background:var(--navy-700);color:#fff;font-family:'Manrope';font-weight:700;font-size:11px;letter-spacing:.04em;text-transform:uppercase;padding:7px 14px}
 .rep-t tr.sec-row td:first-child{background:var(--navy-700);color:#fff;position:static}
+/* ── Развёрнутый (широкий) отчёт: группы в строках, показатели в столбцах ── */
+.rep-wide th.grp-h{position:sticky;left:0;z-index:3;background:var(--navy-800);color:#fff;text-align:left;min-width:170px;vertical-align:bottom}
+.rep-wide th.sec-h{background:var(--navy-700);color:#fff;font-family:'Manrope';font-weight:700;font-size:10px;letter-spacing:.04em;text-transform:uppercase;text-align:center;border-left:2px solid rgba(255,255,255,.16)}
+.rep-wide th.col-h{background:var(--navy-800);color:rgba(255,255,255,.9);font-weight:600;font-size:10.5px;white-space:normal;min-width:88px;max-width:110px;vertical-align:bottom;line-height:1.25}
+.rep-wide td.grp-c{position:sticky;left:0;z-index:2;background:var(--white);text-align:left;min-width:170px;font-weight:600;color:var(--ink-900)}
+.rep-wide tbody tr:hover td{background:var(--blue-50)}
+.rep-wide tbody tr:hover td.grp-c{background:var(--blue-50)}
+.rep-wide tr.r-total td{background:var(--blue-50);font-weight:800;color:var(--ink-900)}
+.rep-wide tr.r-total td.grp-c{background:var(--blue-50)}
+.rep-wide td.r-done{background:#f7fcf8}
 /* Стрелки динамики (сравнение периодов) */
 .dlt{font-weight:700;font-size:11px;margin-left:4px}
 .dlt-up{color:var(--st-done)}.dlt-down{color:var(--st-cancel)}.dlt-flat{color:var(--ink-500)}
@@ -270,7 +280,7 @@ td.slot.current-lead-slot{background:var(--blue-100)}
       <span class="bd-lbl">Разрез:</span>
       <button class="bd-btn active" data-bd="mgr"     onclick="setBreakdown('mgr',this)">По менеджерам</button>
       <button class="bd-btn"        data-bd="segment" onclick="setBreakdown('segment',this)">По сегментам</button>
-      <button class="bd-btn"        data-bd="source"  onclick="setBreakdown('source',this)">По источнику</button>
+      <button class="bd-btn"        data-bd="source"  onclick="setBreakdown('source',this)">По источнику лида</button>
       <button class="bd-btn"        data-bd="tm"      onclick="setBreakdown('tm',this)">По ТМ</button>
     </div>
 
@@ -407,7 +417,7 @@ const F = {
   // Журнал истории статусов встречи (создан в Б24 как UF_CRM_SH_LOG).
   // Шахматка работает с лидами → используем лидовый код.
   journal      : 'UF_CRM_1783542558',   // журнал в ЛИДАХ
-  journalDeal  : 'UF_CRM_1783543707',   // журнал в СДЕЛКАХ (на будущее)
+  journalDeal  : 'UF_CRM_1785701390',   // журнал в СДЕЛКАХ
   calId        : 'UF_CRM_SH_CALID',     // ID события календаря (чтобы не плодить дубли)
 };
 
@@ -507,6 +517,11 @@ let editId         = null, modalMgr, modalSlot, modalDate;
 
 // ── Сегментация селлера ──
 let segmentFieldItems = [];   // [{id, letter, label}] — расшифровка списка UF_CRM_1730551844
+let leadSources = [];         // [{id, name}] — справочник источников лида (crm.status SOURCE)
+let leadSourceName = {};      // SOURCE_ID → название источника
+// Коды полей встречи в СДЕЛКАХ (определяются автоматически по названию поля,
+// т.к. в сделках коды свои). Журнал сделки известен явно.
+let DF = null;                // {date,status,manager,tm,segment,journal,tmqual} или null если не найдено
 let segmentIdToLetter = {};   // id значения поля → буква (A/C/D/E/F/G/H)
 let segmentDeptIds    = {};   // буква сегмента → ID отдела в Б24
 let segmentManagers   = {};   // буква сегмента → [{id,name}] менеджеры этого отдела
@@ -842,6 +857,72 @@ async function loadSegmentDepartments(force = false) {
   }
 }
 
+// Справочник источников лида (crm.status, ENTITY_ID = SOURCE).
+// SOURCE_ID лида → человекочитаемое название (Сайт, Звонок, Авито…).
+async function loadLeadSources(force = false) {
+  try {
+    const cached = !force && cacheGet('sh_lead_sources', 12 * 60 * 60 * 1000);
+    if (cached) {
+      leadSources = cached; leadSourceName = {};
+      leadSources.forEach(s => leadSourceName[s.id] = s.name);
+      log('📥 Источники лидов (кэш): ' + leadSources.length);
+      return;
+    }
+    const list = await apiAll('crm.status.list', { filter: { ENTITY_ID: 'SOURCE' }, order: { SORT: 'ASC' } });
+    leadSources = list.map(s => ({ id: String(s.STATUS_ID), name: String(s.NAME || s.STATUS_ID) }));
+    leadSourceName = {};
+    leadSources.forEach(s => leadSourceName[s.id] = s.name);
+    cacheSet('sh_lead_sources', leadSources);
+    log('📥 Источники лидов: ' + leadSources.map(s => s.name).join(', '));
+  } catch (e) {
+    log('⚠️ loadLeadSources: ' + e.message);
+    leadSources = []; leadSourceName = {};
+  }
+}
+
+// Автоопределение кодов полей встречи в СДЕЛКАХ.
+// Логика: берём названия наших полей из crm.lead.fields, затем в crm.deal.fields
+// ищем поля с такими же названиями и сохраняем их коды сделки. Журнал сделки
+// известен явно (F.journalDeal). Если что-то не нашлось — DF останется без него,
+// и отчёт по сделкам просто пропустит это поле (не сломается).
+async function loadDealFields(force = false) {
+  try {
+    const cached = !force && cacheGet('sh_deal_fields_v1', 12 * 60 * 60 * 1000);
+    if (cached) { DF = cached; log('🧩 Поля сделки (кэш): ' + JSON.stringify(DF)); return; }
+
+    const [leadF, dealF] = await Promise.all([
+      apiOne('crm.lead.fields', {}),
+      apiOne('crm.deal.fields', {}),
+    ]);
+
+    // Название → код в сделках
+    const dealTitleToCode = {};
+    Object.keys(dealF || {}).forEach(code => {
+      const t = (dealF[code] && dealF[code].title || '').trim().toLowerCase();
+      if (t) dealTitleToCode[t] = code;
+    });
+    // Код лида → его название
+    const leadTitle = code => ((leadF[code] && leadF[code].title) || '').trim().toLowerCase();
+
+    // Для каждого нужного поля лида ищем в сделках поле с тем же названием
+    const wanted = { date:F.date, status:F.status, manager:F.manager, tm:F.tm, segment:F.segment, tmqual:F.tmqual };
+    DF = { journal: F.journalDeal };  // журнал знаем явно
+    Object.keys(wanted).forEach(key => {
+      const lt = leadTitle(wanted[key]);
+      if (lt && dealTitleToCode[lt]) DF[key] = dealTitleToCode[lt];
+    });
+
+    cacheSet('sh_deal_fields_v1', DF);
+    const found = Object.keys(DF).filter(k => DF[k]);
+    log('🧩 Поля сделки определены: ' + found.map(k => k + '=' + DF[k]).join(', '));
+    const miss = ['date','status','manager','tm','segment'].filter(k => !DF[k]);
+    if (miss.length) log('⚠️ В сделках не нашлись поля: ' + miss.join(', ') + ' — встречи-сделки по ним считаться не будут.');
+  } catch (e) {
+    log('⚠️ loadDealFields: ' + e.message);
+    DF = null;
+  }
+}
+
 // Список менеджеров для выбранного значения сегмента (по ID значения поля).
 function managersForSegmentValue(segId) {
   if (!segId) return null;
@@ -877,7 +958,7 @@ function onSegmentFilterChange() {
 // ════════════════════════════════════════════════
 async function loadEntries(from, to, force = false) {
   try {
-    const SELECT = ['ID','TITLE','STATUS_ID','ASSIGNED_BY_ID','CREATED_BY_ID', F.manager, F.date, F.status, F.tm, F.tmqual, F.segment, F.journal, F.calId];
+    const SELECT = ['ID','TITLE','STATUS_ID','SOURCE_ID','ASSIGNED_BY_ID','CREATED_BY_ID', F.manager, F.date, F.status, F.tm, F.tmqual, F.segment, F.journal, F.calId];
     const ORDER  = { [F.date]: 'ASC' };
     const cacheKey = 'sh_leads_' + from + '_' + to;
 
@@ -936,13 +1017,68 @@ async function loadEntries(from, to, force = false) {
       return d >= from && d <= to;
     });
     cacheSet(cacheKey, filtered);
-    log('📅 За период: ' + filtered.length + ' (' + Math.round(performance.now() - t0) + 'мс)');
-    return filtered.map(item => mapLead(item));
+    log('📅 За период (лиды): ' + filtered.length + ' (' + Math.round(performance.now() - t0) + 'мс)');
+    const leadEntries = filtered.map(item => mapLead(item));
+
+    // ── Догружаем СДЕЛКИ-встречи за тот же период и дедуплицируем ──
+    let dealEntries = [];
+    try {
+      dealEntries = await loadDealEntries(from, to);
+    } catch (e) {
+      log('⚠️ Сделки не загружены: ' + e.message);
+    }
+
+    if (dealEntries.length) {
+      // Дедупликация: если лид сконвертирован в сделку (сделка знает его LEAD_ID) —
+      // считаем по сделке, а исходный лид убираем, чтобы не задвоить.
+      const convertedLeadIds = new Set(dealEntries.map(d => d.leadId).filter(Boolean));
+      const leadsKept = leadEntries.filter(l => !convertedLeadIds.has(String(l.id)));
+      log('🔗 Лид+сделка: лидов ' + leadEntries.length + ', сделок ' + dealEntries.length +
+          ', убрано сконвертированных лидов ' + (leadEntries.length - leadsKept.length));
+      return [...leadsKept, ...dealEntries];
+    }
+    return leadEntries;
   } catch (e) {
     setStatus('Ошибка загрузки: ' + e.message, 'error');
     log('❌ loadEntries: ' + e.message);
     return [];
   }
+}
+
+// Загрузка СДЕЛОК-встреч за период (по дате встречи в поле сделки DF.date).
+// Возвращает массив mapped-встреч с entity='deal'. Требует, чтобы DF.date был найден.
+async function loadDealEntries(from, to) {
+  if (!DF || !DF.date) { log('ℹ️ Сделки пропущены: не определено поле даты встречи в сделках.'); return []; }
+  const cacheKey = 'sh_deals_' + from + '_' + to;
+  const cached = cacheGet(cacheKey, 90 * 1000);
+  if (cached) { log('📅 Сделки за период: ' + cached.length + ' (кэш)'); return cached.map(mapDeal).filter(Boolean); }
+
+  const SELECT = ['ID','TITLE','STATUS_ID','SOURCE_ID','ASSIGNED_BY_ID','CREATED_BY_ID','LEAD_ID',
+                  DF.date, DF.status, DF.manager, DF.tm, DF.segment, DF.tmqual, DF.journal].filter(Boolean);
+  const rangeFilter = { ['>=' + DF.date]: from + 'T00:00:00', ['<=' + DF.date]: to + 'T23:59:59' };
+  const ORDER = { [DF.date]: 'ASC' };
+
+  const d0 = await apiPage('crm.deal.list', { filter: rangeFilter, select: SELECT, order: ORDER, start: 0 });
+  if (d0.error) { log('⚠️ crm.deal.list: ' + (d0.error_description || d0.error)); return []; }
+  let items = Array.isArray(d0.result) ? [...d0.result] : [];
+  const total = d0.total || 0;
+
+  if (total > 200) {
+    log('🛑 Сделок ' + total + ' — фильтр по UF-дате не сработал, беру первые ' + items.length + '.');
+  } else if (d0.next && items.length < total) {
+    const starts = [];
+    for (let s = d0.next; s < total; s += 50) starts.push(s);
+    for (let i = 0; i < starts.length; i += 5) {
+      const batch = starts.slice(i, i + 5);
+      const pages = await Promise.all(batch.map(start =>
+        apiPage('crm.deal.list', { filter: rangeFilter, select: SELECT, order: ORDER, start })));
+      for (const page of pages) if (Array.isArray(page.result)) items.push(...page.result);
+    }
+  }
+  const filtered = items.filter(it => { const d = (it[DF.date] || '').slice(0,10); return d >= from && d <= to; });
+  cacheSet(cacheKey, filtered);
+  log('📅 Сделки за период: ' + filtered.length);
+  return filtered.map(mapDeal).filter(Boolean);
 }
 
 function mapLead(item) {
@@ -1003,9 +1139,32 @@ function mapLead(item) {
     entity   : 'lead',                              // тип сущности (лид/сделка)
     journal  : item[F.journal] || '',               // сырой журнал статусов
     calId    : String(item[F.calId] || ''),         // ID события календаря
+    sourceId : String(item.SOURCE_ID || ''),        // источник лида (SOURCE_ID: WEB/CALL/AVITO…)
     tmqual   : Array.isArray(item[F.tmqual]) ? item[F.tmqual].map(String)
                : (item[F.tmqual] ? [String(item[F.tmqual])] : []),   // статус ТМ квалификации
   };
+}
+
+// Маппер СДЕЛКИ. Переименовываем deal-поля в лидовые коды по карте DF и
+// переиспользуем mapLead (вся логика статусов/журнала общая). Помечаем entity='deal'.
+function mapDeal(item) {
+  if (!DF) return null;
+  const shim = {
+    ID: item.ID, TITLE: item.TITLE, STATUS_ID: item.STATUS_ID,
+    SOURCE_ID: item.SOURCE_ID, ASSIGNED_BY_ID: item.ASSIGNED_BY_ID, CREATED_BY_ID: item.CREATED_BY_ID,
+  };
+  if (DF.date)    shim[F.date]    = item[DF.date];
+  if (DF.status)  shim[F.status]  = item[DF.status];
+  if (DF.manager) shim[F.manager] = item[DF.manager];
+  if (DF.tm)      shim[F.tm]      = item[DF.tm];
+  if (DF.segment) shim[F.segment] = item[DF.segment];
+  if (DF.tmqual)  shim[F.tmqual]  = item[DF.tmqual];
+  if (DF.journal) shim[F.journal] = item[DF.journal];
+
+  const mapped = mapLead(shim);
+  mapped.entity = 'deal';
+  mapped.leadId = String(item.LEAD_ID || '');  // из какого лида создана (для дедупликации)
+  return mapped;
 }
 
 // ════════════════════════════════════════════════
@@ -1441,10 +1600,14 @@ function getReportGroups() {
     return groups;
   }
   if (reportBreakdown === 'source') {
-    return [
-      { key:'tm',  name:'От телемаркетолога', filter: e => e.source === 'tm'  },
-      { key:'own', name:'Свои',               filter: e => e.source === 'own' },
-    ];
+    // Разрез по РЕАЛЬНОМУ источнику лида (SOURCE_ID из Битрикса).
+    // Показываем только источники, которые реально встречаются в данных.
+    const groups = leadSources.map(s => ({
+      key: s.id, name: s.name,
+      filter: e => String(e.sourceId) === String(s.id),
+    }));
+    groups.push({ key:'__nosrc__', name:'Без источника', filter: e => !e.sourceId });
+    return groups;
   }
   if (reportBreakdown === 'tm') {
     const groups = tms.map(t => ({
@@ -1644,7 +1807,7 @@ function renderAnalytics() {
   }
 
   const colLabel = reportBreakdown === 'segment' ? 'Сегмент'
-                 : reportBreakdown === 'source'  ? 'Источник'
+                 : reportBreakdown === 'source'  ? 'Источник лида'
                  : reportBreakdown === 'tm'      ? 'Телемаркетолог' : 'Менеджер ОП';
   const avgDone  = doneRate;
   const ncols    = cols.length + 2; // подпись + группы + Итого
@@ -1653,68 +1816,70 @@ function renderAnalytics() {
   const workdays = getDates().filter(d => { const g = d.getDay(); return g >= 1 && g <= 5; }).length;
   const availPer = Math.max(workdays, 1) * SLOTS.length;
 
-  const secRow = t => `<tr class="sec-row"><td colspan="${ncols}">${t}</td></tr>`;
-  // Универсальная строка: fmt(c) → <td> для группы; totFmt() → <td> "Итого".
-  const mrow = (label, title, fmt, totFmt, cls) => {
-    let h = `<tr class="${cls||''}"><td title="${title||''}">${label}</td>`;
-    cols.forEach(col => h += fmt(col.c));
-    h += totFmt();
-    return h + '</tr>';
-  };
+  // ══ ТАБЛИЦА: строки = группы, столбцы = показатели (по секциям) ══
+  // Каждый столбец: {sec, label, title, fmt(counter)->текст, cls?(counter)->класс}
+  const rate = c => c.total ? c.done / c.total : 0;
+  const rateCls = c => c.total < 5 ? '' : (rate(c) >= avgDone*1.15 ? 'cr-good' : (rate(c) < avgDone*0.7 ? 'cr-low' : ''));
 
-  let html = '<table class="an-table rep-t"><thead><tr>';
-  html += `<th>${colLabel}</th>`;
-  cols.forEach(col => html += `<th class="right">${escapeHtml(col.name)}</th>`);
-  html += '<th class="right gtotal">Итого</th></tr></thead><tbody>';
+  const COLS = [
+    // ── Исходы встреч, шт ──
+    { sec:'Исходы встреч, шт', label:'Всего назначено',              title:'Все назначенные встречи за период', fmt:c=>c.total||0 },
+    { sec:'Исходы встреч, шт', label:'Подтверждено',                 title:'Дошли до статуса Подтверждена', fmt:c=>c.confirmedAny||'' },
+    { sec:'Исходы встреч, шт', label:'Перенос → Проведено',          title:'Был перенос, без ТМ, финал проведено', fmt:c=>c.mv_done||'' },
+    { sec:'Исходы встреч, шт', label:'Перенос → Отдано в ТМ',        title:'Перенос, затем отдано в ТМ (в работе)', fmt:c=>c.mv_gtm||'' },
+    { sec:'Исходы встреч, шт', label:'Перенос → Отмена',             title:'Перенос, без ТМ, финал отмена', fmt:c=>c.mv_cancel||'' },
+    { sec:'Исходы встреч, шт', label:'Перенос → ТМ → Отмена',        title:'Перенос → отдано в ТМ → отмена', fmt:c=>c.mv_gtm_cancel||'' },
+    { sec:'Исходы встреч, шт', label:'Перенос → ТМ → Проведено',     title:'Перенос → отдано в ТМ → проведено', fmt:c=>c.mv_gtm_done||'' },
+    { sec:'Исходы встреч, шт', label:'Проведено',                    title:'Всего доведено до Проведено', fmt:c=>`${c.done||0}${c.total?` <small>${pct(c.done,c.total)}</small>`:''}`, cls:rateCls, cellCls:'r-done' },
+    // ── Коэффициенты ──
+    { sec:'Коэффициенты', label:'Доводимость %',            title:'Проведено / Всего назначено', fmt:c=>pct(c.done,c.total), cls:rateCls },
+    { sec:'Коэффициенты', label:'Подтверждено %',           title:'Доля дошедших до Подтверждена', fmt:c=>pct(c.confirmedAny,c.total) },
+    { sec:'Коэффициенты', label:'Переносы %',               title:'Доля встреч хотя бы с одним переносом', fmt:c=>pct(c.movedAny,c.total) },
+    { sec:'Коэффициенты', label:'Отмены %',                 title:'Доля встреч с финальной Отменой', fmt:c=>pct(c.cancelAll,c.total) },
+    { sec:'Коэффициенты', label:'Неявка / зависло %',       title:'Встреча в прошлом, не закрыта', fmt:c=>pct(c.noShow,c.total) },
+    { sec:'Коэффициенты', label:'Ср. переносов',            title:'Сумма переносов / число встреч', fmt:c=>c.total?(c.movesTotal/c.total).toFixed(2).replace('.',','):'—' },
+    // ── Время ──
+    { sec:'Время (дн)', label:'Назначение → проведение',    title:'Средний срок до Проведено', fmt:c=>days(c.durDoneSum,c.durDoneN) },
+    { sec:'Время (дн)', label:'До 1-го переноса',           title:'Средний срок до первого переноса', fmt:c=>days(c.firstMoveSum,c.firstMoveN) },
+    { sec:'Время (дн)', label:'Висит &gt; '+HANG_DAYS+' дн', title:'Незакрытые встречи старше '+HANG_DAYS+' дней', fmt:c=>c.hang||'', cls:c=>c.hang?'cr-low':'' },
+  ];
+  // Загрузка — только в разрезе по менеджерам
+  if (reportBreakdown === 'mgr') {
+    COLS.push({ sec:'Загрузка', label:'Занято слотов %', title:'Встречи / доступные слоты за период',
+      fmt:c=>Math.round(c.total/availPer*100)+'%', cls:c=>{const u=c.total/availPer;return u>1?'cr-low':(u<0.3?'cr-mid':'');} });
+  }
 
-  // ── Секция 1: Исходы встреч (шт) ──
-  html += secRow('Исходы встреч, шт');
-  REPORT_ROWS.forEach(r => {
-    const rowCls = r.kind === 'total' ? 'r-total' : (r.kind === 'done' ? 'r-done' : '');
-    if (r.kind === 'done') {
-      html += mrow(r.label, r.title,
-        c => { const rate=c.total?c.done/c.total:0; const cls=c.total<5?'':(rate>=avgDone*1.15?'cr-good':(rate<avgDone*0.7?'cr-low':'')); return `<td class="right ${cls}">${c.done||0}${c.total?` <small>${pct(c.done,c.total)}</small>`:''}</td>`; },
-        () => `<td class="right gtotal">${T.done} <small>${pct(T.done,T.total)}</small></td>`, rowCls);
-    } else if (r.kind === 'total') {
-      html += mrow(r.label, r.title, c => `<td class="right">${c.total||0}</td>`, () => `<td class="right gtotal">${T.total}</td>`, rowCls);
-    } else {
-      html += mrow(r.label, r.title, c => `<td class="right">${c[r.key]||''}</td>`, () => `<td class="right gtotal">${T[r.key]||''}</td>`, rowCls);
-    }
+  // Верхняя строка заголовков — секции (объединённые ячейки)
+  const secSpans = [];
+  COLS.forEach(col => {
+    const last = secSpans[secSpans.length-1];
+    if (last && last.sec === col.sec) last.span++;
+    else secSpans.push({ sec: col.sec, span: 1 });
   });
 
-  // ── Секция 2: Коэффициенты ──
-  html += secRow('Коэффициенты');
-  html += mrow('Доводимость %', 'Проведено / Всего назначено',
-    c => { const rate=c.total?c.done/c.total:0; const cls=c.total<5?'':(rate>=avgDone*1.15?'cr-good':(rate<avgDone*0.7?'cr-low':'')); return `<td class="right ${cls}">${pct(c.done,c.total)}</td>`; },
-    () => `<td class="right gtotal">${pct(T.done,T.total)}</td>`);
-  html += mrow('Подтверждено %', 'Доля встреч, дошедших до статуса Подтверждена',
-    c => `<td class="right">${pct(c.confirmedAny,c.total)}</td>`, () => `<td class="right gtotal">${pct(T.confirmedAny,T.total)}</td>`);
-  html += mrow('Переносы %', 'Доля встреч, где был хотя бы один перенос',
-    c => `<td class="right">${pct(c.movedAny,c.total)}</td>`, () => `<td class="right gtotal">${pct(T.movedAny,T.total)}</td>`);
-  html += mrow('Отмены %', 'Доля встреч с финальным статусом Отмена',
-    c => `<td class="right">${pct(c.cancelAll,c.total)}</td>`, () => `<td class="right gtotal">${pct(T.cancelAll,T.total)}</td>`);
-  html += mrow('Неявка / зависло %', 'Прокси: встреча в прошлом, статус Назначена/Подтверждена, не закрыта',
-    c => `<td class="right">${pct(c.noShow,c.total)}</td>`, () => `<td class="right gtotal">${pct(T.noShow,T.total)}</td>`);
-  html += mrow('Ср. переносов на встречу', 'Сумма переносов / число встреч',
-    c => `<td class="right">${c.total?(c.movesTotal/c.total).toFixed(2).replace('.',','):'—'}</td>`,
-    () => `<td class="right gtotal">${T.total?(T.movesTotal/T.total).toFixed(2).replace('.',','):'—'}</td>`);
+  let html = '<table class="an-table rep-t rep-wide"><thead>';
+  html += `<tr><th class="grp-h" rowspan="2">${colLabel}</th>`;
+  secSpans.forEach(s => html += `<th class="sec-h" colspan="${s.span}">${s.sec}</th>`);
+  html += '</tr><tr>';
+  COLS.forEach(col => html += `<th class="right col-h" title="${col.title||''}">${col.label}</th>`);
+  html += '</tr></thead><tbody>';
 
-  // ── Секция 3: Время ──
-  html += secRow('Время (из журнала статусов)');
-  html += mrow('Ср. срок: назначение → проведение', 'Средний срок от первой записи журнала до Проведено',
-    c => `<td class="right">${days(c.durDoneSum,c.durDoneN)}</td>`, () => `<td class="right gtotal">${days(T.durDoneSum,T.durDoneN)}</td>`);
-  html += mrow('Ср. время до 1-го переноса', 'Средний срок от назначения до первого переноса',
-    c => `<td class="right">${days(c.firstMoveSum,c.firstMoveN)}</td>`, () => `<td class="right gtotal">${days(T.firstMoveSum,T.firstMoveN)}</td>`);
-  html += mrow('Висит &gt; ' + HANG_DAYS + ' дн', 'Незакрытые встречи старше ' + HANG_DAYS + ' дней',
-    c => `<td class="right ${c.hang?'cr-low':''}">${c.hang||''}</td>`, () => `<td class="right gtotal">${T.hang||''}</td>`);
-
-  // ── Секция 4: Загрузка (только в разрезе по менеджерам) ──
-  if (reportBreakdown === 'mgr') {
-    html += secRow('Загрузка (' + SLOTS.length + ' слотов/день × ' + workdays + ' раб. дн)');
-    html += mrow('Занято слотов %', 'Встречи менеджера / доступные слоты за период',
-      c => { const u=c.total/availPer; const cls=u>1?'cr-low':(u<0.3?'cr-mid':''); return `<td class="right ${cls}">${Math.round(u*100)}%</td>`; },
-      () => `<td class="right gtotal">${Math.round(T.total/(availPer*cols.length)*100)}%</td>`);
-  }
+  // Строки групп
+  cols.forEach(col => {
+    html += `<tr><td class="grp-c">${escapeHtml(col.name)}</td>`;
+    COLS.forEach(mc => {
+      const extra = (mc.cls ? mc.cls(col.c) : '') + (mc.cellCls ? ' '+mc.cellCls : '');
+      html += `<td class="right ${extra}">${mc.fmt(col.c)}</td>`;
+    });
+    html += '</tr>';
+  });
+  // Итоговая строка
+  html += `<tr class="r-total"><td class="grp-c">Итого</td>`;
+  COLS.forEach(mc => {
+    const extra = mc.cellCls ? mc.cellCls : '';
+    html += `<td class="right ${extra}">${mc.fmt(T)}</td>`;
+  });
+  html += '</tr>';
 
   html += '</tbody></table>';
   wrap.innerHTML = html;
@@ -2284,7 +2449,7 @@ function setStatus(msg, type='') {
   el.className   = 'status-bar' + (type ? ' '+type : '');
 }
 
-const BUILD_VERSION = 'shahmatka build 2026-07-30 #41 (убраны вкладки продукта Аккаунтинг/Платформа)';
+const BUILD_VERSION = 'shahmatka build 2026-07-30 #44 (отчёт: лиды+сделки с дедупликацией)';
 
 function log(msg) {
   const b = document.getElementById('debug-box');
@@ -2727,11 +2892,13 @@ function clearAllCache() {
 checkPlacements();
 log('🔧 ' + BUILD_VERSION);
 setView('grid'); // стартуем на Шахматке; прячем Квартал
-Promise.all([loadSegmentField(), loadSegmentDepartments()]).then(() => {
+// Справочники сегментов/источников — не блокируют, дорисуют по готовности.
+Promise.all([loadSegmentField(), loadSegmentDepartments(), loadLeadSources()]).then(() => {
   renderGrid();
   renderAnalytics();
 });
-loadData();
+// Поля сделки нужны ДО первой загрузки данных, чтобы сделки попали в отчёт сразу.
+loadDealFields().then(() => loadData());
 </script>
 </body>
 </html>
