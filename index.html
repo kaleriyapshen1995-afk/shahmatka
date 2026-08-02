@@ -1464,7 +1464,7 @@ async function deleteEntry() {
 // ════════════════════════════════════════════════
 //  РЕНДЕР СЕТКИ
 // ════════════════════════════════════════════════
-function dateKey(d)    { return d.toISOString().slice(0, 10); }
+function dateKey(d)    { const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), day=String(d.getDate()).padStart(2,'0'); return y+'-'+m+'-'+day; }
 function addDays(d, n) { const r = new Date(d); r.setDate(r.getDate() + n); return r; }
 function fmtDay(d)     { return ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'][d.getDay()]; }
 function fmtDate(d)    { return d.toLocaleDateString('ru-RU', {day:'2-digit',month:'2-digit'}); }
@@ -2486,7 +2486,7 @@ function setStatus(msg, type='') {
   el.className   = 'status-bar' + (type ? ' '+type : '');
 }
 
-const BUILD_VERSION = 'shahmatka build 2026-07-30 #46 (активная сущность: встреча переезжает лид→сделка)';
+const BUILD_VERSION = 'shahmatka build 2026-07-30 #47 (фикс сдвига даты UTC→локальная)';
 
 function log(msg) {
   const b = document.getElementById('debug-box');
