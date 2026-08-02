@@ -426,11 +426,11 @@ const F = {
 // автоопределение по названию ненадёжно — задаём коды напрямую.
 // null → пробуем определить автоматически (loadDealFields). Известные заполнены.
 const DEAL_FIELDS_EXPLICIT = {
-  date    : 'UF_CRM_685BB7F11D48B',   // ⬅ боевая дата встречи в сделке
-  status  : null,                     // ← нужен код поля "Статус встречи" в сделке
-  manager : null,                     // ← нужен код поля "Менеджер ОП" в сделке
-  segment : null,                     // ← нужен код поля "Сегментация селлера" в сделке
-  tm      : 'UF_CRM_1675251074',      // определился автоматически (совпал с лидом)
+  date    : 'UF_CRM_685BB7F11D48B',   // дата встречи в сделке
+  status  : 'UF_CRM_669F648A78B94',   // статус встречи в сделке
+  manager : 'UF_CRM_6A33A9B05C12A',   // менеджер ОП в сделке
+  segment : 'UF_CRM_1673030308',      // сегментация селлера в сделке
+  tm      : 'UF_CRM_1675251074',      // телемаркетолог (совпал с лидом)
   tmqual  : null,
   journal : 'UF_CRM_6A4F3FFF6EC59',
 };
@@ -912,7 +912,7 @@ async function loadLeadSources(force = false) {
 // и отчёт по сделкам просто пропустит это поле (не сломается).
 async function loadDealFields(force = false) {
   try {
-    const cached = !force && cacheGet('sh_deal_fields_v3', 12 * 60 * 60 * 1000);
+    const cached = !force && cacheGet('sh_deal_fields_v4', 12 * 60 * 60 * 1000);
     if (cached) { DF = cached; log('🧩 Поля сделки (кэш): ' + JSON.stringify(DF)); return; }
 
     const [leadF, dealF] = await Promise.all([
@@ -944,7 +944,7 @@ async function loadDealFields(force = false) {
       if (lt && dealTitleToCode[lt]) { DF[key] = dealTitleToCode[lt]; return; }
     });
 
-    cacheSet('sh_deal_fields_v3', DF);
+    cacheSet('sh_deal_fields_v4', DF);
     const found = Object.keys(DF).filter(k => DF[k]);
     log('🧩 Поля сделки определены: ' + found.map(k => k + '=' + DF[k]).join(', '));
     const miss = ['date','status','manager','tm','segment'].filter(k => !DF[k]);
@@ -2582,7 +2582,7 @@ function setStatus(msg, type='') {
   el.className   = 'status-bar' + (type ? ' '+type : '');
 }
 
-const BUILD_VERSION = 'shahmatka build 2026-07-30 #52 (отчёт: +Подтв→Отмена, +Подтв→Перенос)';
+const BUILD_VERSION = 'shahmatka build 2026-07-30 #54 (все поля сделки прописаны)';
 
 function log(msg) {
   const b = document.getElementById('debug-box');
@@ -2931,23 +2931,6 @@ async function registerPlacements() {
   }
 }
 
-async function autoLinkDealToLead() {
-  if (!currentDealId || currentLeadId) return;
-  try {
-    const deal = await apiOne('crm.deal.get', { id: currentDealId });
-    if (deal && deal.LEAD_ID) {
-      currentLeadId = String(deal.LEAD_ID);
-      log('📎 Лид сделки #' + currentDealId + ': #' + currentLeadId);
-      showLeadBanner();
-      renderGrid();
-    } else {
-      log('⚠️ У сделки #' + currentDealId + ' нет связанного лида');
-    }
-  } catch (e) {
-    log('⚠️ crm.deal.get: ' + e.message);
-  }
-}
-
 // Определяет "активную сущность" встречи по ID лида:
 // если существует сделка с этим LEAD_ID — активная = сделка, иначе = лид.
 // Возвращает {type:'deal'|'lead', id, dealId?, leadId}.
@@ -3092,7 +3075,14 @@ function openLeadCard(leadId) {
 }
 
 if (currentLeadId) showLeadBanner();
-if (currentDealId && !currentLeadId) autoLinkDealToLead();
+if (currentDealId && !currentLeadId) {
+  // Открыто из сделки через URL — показываем встречу САМОЙ сделки (не перескок на лид).
+  activeEntity = { type: 'deal', id: String(currentDealId) };
+  (async () => {
+    try { if (!DF || !DF.date) await loadDealFields(); await showDealMeeting(currentDealId); }
+    catch (e) { log('⚠️ Старт из сделки: ' + e.message); }
+  })();
+}
 
 async function reloadAll() {
   log('↻ Полное обновление (сегменты + отделы + пользователи + лиды)...');
