@@ -532,6 +532,10 @@ let tmqualItems       = [];   // [{id,label}] — значения поля "С�
 const URL_PARAMS  = new URLSearchParams(window.location.search);
 let currentLeadId = URL_PARAMS.get('lead_id') || null;
 let currentDealId = URL_PARAMS.get('deal_id') || null;
+let currentDealEntryId = null; // id встречи-сделки, открытой из карточки сделки
+// Активная сущность встречи: где сейчас живёт встреча (лид или сделка).
+// {type:'lead'|'deal', id} — сюда пишем при редактировании.
+let activeEntity = null;
 let autoJumpDone  = false; // дату шахматки под дату встречи лида переключаем только раз
 let currentUserId = '';    // ID текущего залогиненного пользователя (для прав)
 let currentUserIsAdmin = false; // админ видит/меняет всё
@@ -1306,14 +1310,36 @@ async function saveEntry() {
     };
     // ВАЖНО: ASSIGNED_BY_ID (ответственный лида) намеренно НЕ включаем — он остаётся прежним.
 
+    // ── Определяем ЦЕЛЕВУЮ СУЩНОСТЬ (куда писать: лид или сделка) ──
+    // Встреча "переезжает" в сделку после конвертации. Если редактируем
+    // встречу-сделку или активная сущность = сделка — пишем в СДЕЛКУ.
+    let saveToDeal = false, dealTargetId = null;
+    if (editId) {
+      const ex = allEntries.find(x => x.id === String(editId));
+      if (ex && ex.entity === 'deal') { saveToDeal = true; dealTargetId = editId; }
+    } else if (activeEntity && activeEntity.type === 'deal') {
+      saveToDeal = true; dealTargetId = activeEntity.id;
+    } else if (currentDealId && !currentLeadId) {
+      saveToDeal = true; dealTargetId = currentDealId;
+    }
+
+    if (saveToDeal && (!DF || !DF.date)) {
+      alert('Не определены поля встречи в сделках — сохранение в сделку невозможно. Обновите страницу.');
+      btn.disabled = false; btn.textContent = 'Сохранить';
+      return;
+    }
+
     // ── Журнал статусов: дописываем текущий статус в историю встречи ──
     try {
-      const targetId = editId || currentLeadId;
+      const targetId = editId || (saveToDeal ? dealTargetId : currentLeadId);
       let prevJournal = '';
       if (targetId) {
         const ex = allEntries.find(x => x.id === String(targetId));
         if (ex && ex.journal) prevJournal = ex.journal;
-        else {
+        else if (saveToDeal) {
+          const cur = await apiOne('crm.deal.get', { id: parseInt(targetId), select: [DF.journal] });
+          prevJournal = (cur && cur[DF.journal]) || '';
+        } else {
           const cur = await apiOne('crm.lead.get', { id: parseInt(targetId) });
           prevJournal = (cur && cur[F.journal]) || '';
         }
@@ -1324,18 +1350,29 @@ async function saveEntry() {
     }
 
     let savedLeadId = null;
-    if (editId) {
-      // Редактирование существующей встречи (клик на занятую ячейку)
+    if (saveToDeal) {
+      // Пишем в СДЕЛКУ: переводим поля из лидовых кодов в коды сделки (DF).
+      const dfields = {
+        [DF.date]    : fields[F.date],
+        [DF.status]  : fields[F.status],
+      };
+      if (DF.manager) dfields[DF.manager] = fields[F.manager];
+      if (DF.tm)      dfields[DF.tm]      = fields[F.tm];
+      if (DF.segment) dfields[DF.segment] = fields[F.segment];
+      if (DF.tmqual)  dfields[DF.tmqual]  = fields[F.tmqual];
+      if (DF.journal) dfields[DF.journal] = fields[F.journal];
+      await apiOne('crm.deal.update', { id: parseInt(dealTargetId), fields: dfields });
+      savedLeadId = dealTargetId;
+      log('💾 Встреча сохранена В СДЕЛКУ #' + dealTargetId);
+    } else if (editId) {
       await apiOne('crm.lead.update', { id: parseInt(editId), fields });
       savedLeadId = editId;
     } else if (currentLeadId) {
-      // Назначение встречи из карточки лида. TITLE и ASSIGNED_BY_ID не трогаем.
       const updateFields = { ...fields };
       delete updateFields.TITLE;
       await apiOne('crm.lead.update', { id: parseInt(currentLeadId), fields: updateFields });
       savedLeadId = currentLeadId;
     } else {
-      // Создаём новый лид
       const newId = await apiOne('crm.lead.add', { fields });
       savedLeadId = newId;
     }
@@ -2449,7 +2486,7 @@ function setStatus(msg, type='') {
   el.className   = 'status-bar' + (type ? ' '+type : '');
 }
 
-const BUILD_VERSION = 'shahmatka build 2026-07-30 #44 (отчёт: лиды+сделки с дедупликацией)';
+const BUILD_VERSION = 'shahmatka build 2026-07-30 #46 (активная сущность: встреча переезжает лид→сделка)';
 
 function log(msg) {
   const b = document.getElementById('debug-box');
@@ -2666,22 +2703,34 @@ async function checkPlacements() {
 
       if (entityId && (info.placement === 'CRM_LEAD_DETAIL_TAB' || info.placement === 'CRM_LEAD_LIST_MENU')) {
         currentLeadId = String(entityId);
-        showLeadBanner();
-        renderGrid();
-      } else if (entityId && (info.placement === 'CRM_DEAL_DETAIL_TAB' || info.placement === 'CRM_DEAL_LIST_MENU')) {
-        currentDealId = String(entityId);
+        // Проверяем: не сконвертирован ли лид? Если у него есть связанная сделка
+        // со встречей — активная сущность = сделка, показываем встречу сделки.
         try {
-          const deal = await apiOne('crm.deal.get', { id: entityId });
-          if (deal && deal.LEAD_ID) {
-            currentLeadId = String(deal.LEAD_ID);
+          if (!DF || !DF.date) await loadDealFields();
+          const active = await resolveActiveEntity(currentLeadId);
+          activeEntity = active;
+          if (active.type === 'deal') {
+            currentDealId = active.dealId;
+            currentLeadId = null; // переключаемся на контекст сделки
+            await showDealMeeting(currentDealId);
+          } else {
             showLeadBanner();
             renderGrid();
-            log('📎 Лид сделки #' + currentDealId + ': #' + currentLeadId);
-          } else {
-            log('⚠️ У сделки #' + currentDealId + ' не найден связанный лид (LEAD_ID)');
           }
         } catch (e) {
-          log('⚠️ crm.deal.get: ' + e.message);
+          log('⚠️ Определение активной сущности: ' + e.message);
+          showLeadBanner();
+          renderGrid();
+        }
+      } else if (entityId && (info.placement === 'CRM_DEAL_DETAIL_TAB' || info.placement === 'CRM_DEAL_LIST_MENU')) {
+        currentDealId = String(entityId);
+        activeEntity = { type: 'deal', id: String(entityId) };
+        // После конвертации актуальная встреча живёт В СДЕЛКЕ. Показываем встречу
+        // самой сделки, а не перескакиваем на исходный лид.
+        try {
+          await showDealMeeting(currentDealId);
+        } catch (e) {
+          log('⚠️ Загрузка встречи сделки #' + currentDealId + ': ' + e.message);
         }
       }
     } catch (e) {
@@ -2803,6 +2852,81 @@ async function autoLinkDealToLead() {
   }
 }
 
+// Определяет "активную сущность" встречи по ID лида:
+// если существует сделка с этим LEAD_ID — активная = сделка, иначе = лид.
+// Возвращает {type:'deal'|'lead', id, dealId?, leadId}.
+async function resolveActiveEntity(leadId) {
+  const lid = String(leadId);
+  try {
+    if (DF && DF.date) {
+      const SELECT = ['ID','LEAD_ID', DF.date, DF.status, DF.manager, DF.tm, DF.segment, DF.tmqual, DF.journal,
+                      'TITLE','STATUS_ID','SOURCE_ID','ASSIGNED_BY_ID','CREATED_BY_ID'].filter(Boolean);
+      const res = await apiPage('crm.deal.list', { filter: { LEAD_ID: parseInt(lid) }, select: SELECT, start: 0 });
+      const deals = Array.isArray(res.result) ? res.result : [];
+      // Берём сделку с заполненной датой встречи (актуальная встреча)
+      const withMeeting = deals.find(d => d[DF.date]) || deals[0];
+      if (withMeeting) {
+        log('🔗 Лид #' + lid + ' сконвертирован → активная сущность: сделка #' + withMeeting.ID);
+        return { type: 'deal', id: String(withMeeting.ID), dealId: String(withMeeting.ID), leadId: lid, raw: withMeeting };
+      }
+    }
+  } catch (e) {
+    log('⚠️ resolveActiveEntity: ' + e.message);
+  }
+  return { type: 'lead', id: lid, leadId: lid };
+}
+
+// Грузит встречу конкретной СДЕЛКИ и показывает её в сетке.
+// Требует, чтобы поля сделки были определены (DF). Помечает встречу как текущую.
+async function showDealMeeting(dealId) {
+  if (!DF || !DF.date) { await loadDealFields(); }
+  if (!DF || !DF.date) { log('⚠️ Не определены поля встречи в сделках — не могу показать встречу сделки.'); return; }
+
+  const SELECT = ['ID','TITLE','STATUS_ID','SOURCE_ID','ASSIGNED_BY_ID','CREATED_BY_ID','LEAD_ID',
+                  DF.date, DF.status, DF.manager, DF.tm, DF.segment, DF.tmqual, DF.journal].filter(Boolean);
+  const deal = await apiOne('crm.deal.get', { id: parseInt(dealId), select: SELECT });
+  if (!deal) { log('❌ Сделка #' + dealId + ' не найдена'); return; }
+
+  if (!deal[DF.date]) {
+    log('⚠️ В сделке #' + dealId + ' поле даты встречи пустое — встреча не назначена.');
+    currentDealEntryId = null;
+    showLeadBanner();
+    renderGrid();
+    return;
+  }
+
+  const mapped = mapDeal(deal);
+  if (!mapped) { log('⚠️ Не удалось разобрать встречу сделки #' + dealId); return; }
+  log('📋 Встреча сделки #' + dealId + ': date=' + mapped.date + ', mgr=' + mapped.mgr + ', status=' + mapped.status);
+
+  // Менеджер может быть не в отделе ОП — добавим в сетку временно
+  if (mapped.mgr && !managers.find(m => m.id === mapped.mgr)) {
+    try {
+      const result = await apiAll('user.get', { FILTER: { ID: mapped.mgr } });
+      const u = (Array.isArray(result) && result.length) ? result[0] : null;
+      const nm = u ? ((u.NAME||'')+' '+(u.LAST_NAME||'')).trim() : ('Пользователь #' + mapped.mgr);
+      managers.push({ id: mapped.mgr, name: nm + ' (вне отдела ОП)' });
+    } catch (e) { managers.push({ id: mapped.mgr, name: 'Пользователь #' + mapped.mgr }); }
+  }
+
+  // Кладём встречу сделки в сетку (id с префиксом, чтобы не путать с лидами)
+  currentDealEntryId = mapped.id;
+  allEntries = allEntries.filter(e => !(e.entity === 'deal' && e.id === mapped.id));
+  allEntries.push(mapped);
+
+  // Переключаемся на дату встречи
+  if (!autoJumpDone && mapped.date && mapped.date !== dateKey(currentDate)) {
+    const [y,m,d] = mapped.date.split('-').map(Number);
+    currentDate = new Date(y, m-1, d);
+    const dp = document.getElementById('date-pick'); if (dp) dp.value = mapped.date;
+    autoJumpDone = true;
+  }
+
+  showLeadBanner();
+  renderGrid();
+  log('🎯 Встреча сделки #' + dealId + ' в сетке.');
+}
+
 // ════════════════════════════════════════════════
 //  СТАРТ
 // ════════════════════════════════════════════════
@@ -2812,10 +2936,23 @@ function showLeadBanner() {
   const banner = document.getElementById('lead-banner');
   banner.style.display = 'block';
   const titleEl = document.getElementById('lead-banner-title');
+  const domain = currentDomain || (location.hostname.endsWith('seller24.ru') ? location.hostname : 'crm.seller24.ru');
+
+  // Контекст сделки (после конвертации) — показываем сделку, а не лид
+  if (currentDealId && !currentLeadId) {
+    titleEl.textContent = 'Сделка #' + currentDealId;
+    const dealUrl = 'https://' + domain + '/crm/deal/details/' + currentDealId + '/';
+    banner.style.cursor = 'pointer';
+    banner.onclick = () => { try { (window.top && window.top!==window.self ? window.top.location.href=dealUrl : window.open(dealUrl,'_blank')); } catch(e){ window.open(dealUrl,'_blank'); } };
+    apiOne('crm.deal.get', { id: parseInt(currentDealId) }).then(deal => {
+      const t = deal && deal.TITLE ? ' — ' + escapeHtml(deal.TITLE) : '';
+      titleEl.innerHTML = '<u>Сделка #' + currentDealId + t + '</u> <small>(открыть карточку)</small>';
+    }).catch(()=>{});
+    return;
+  }
 
   titleEl.textContent = 'Лид #' + currentLeadId;
 
-  const domain = currentDomain || (location.hostname.endsWith('seller24.ru') ? location.hostname : 'crm.seller24.ru');
   const leadUrl = 'https://' + domain + '/crm/lead/details/' + currentLeadId + '/';
 
   banner.style.cursor = 'pointer';
