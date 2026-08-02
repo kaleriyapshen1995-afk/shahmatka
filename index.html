@@ -417,7 +417,7 @@ const F = {
   // Журнал истории статусов встречи (создан в Б24 как UF_CRM_SH_LOG).
   // Шахматка работает с лидами → используем лидовый код.
   journal      : 'UF_CRM_1783542558',   // журнал в ЛИДАХ
-  journalDeal  : 'UF_CRM_1785701390',   // журнал в СДЕЛКАХ
+  journalDeal  : 'UF_CRM_6A4F3FFF6EC59',   // журнал в СДЕЛКАХ
   calId        : 'UF_CRM_SH_CALID',     // ID события календаря (чтобы не плодить дубли)
 };
 
@@ -572,10 +572,17 @@ async function apiOne(method, params = {}) {
     headers: { 'Content-Type': 'application/json' },
     body   : JSON.stringify(params),
   });
+  // Даже при HTTP 400 Битрикс кладёт описание ошибки в тело — читаем его,
+  // чтобы видеть, КАКОЕ поле отклонено, а не безликое "HTTP 400".
+  let d = null;
+  try { d = await r.json(); } catch (e) { /* тело не JSON */ }
+  if (d && d.error) {
+    const msg = d.error_description || d.error;
+    log('❌ ' + method + ' → ' + msg);
+    throw new Error(msg);
+  }
   if (!r.ok) throw new Error('HTTP ' + r.status);
-  const d = await r.json();
-  if (d.error) throw new Error(d.error_description || d.error);
-  return d.result;
+  return d ? d.result : null;
 }
 
 // Одна страница "как есть" (с total/next), не бросает на ошибке фильтра
@@ -891,7 +898,7 @@ async function loadLeadSources(force = false) {
 // и отчёт по сделкам просто пропустит это поле (не сломается).
 async function loadDealFields(force = false) {
   try {
-    const cached = !force && cacheGet('sh_deal_fields_v1', 12 * 60 * 60 * 1000);
+    const cached = !force && cacheGet('sh_deal_fields_v2', 12 * 60 * 60 * 1000);
     if (cached) { DF = cached; log('🧩 Поля сделки (кэш): ' + JSON.stringify(DF)); return; }
 
     const [leadF, dealF] = await Promise.all([
@@ -905,22 +912,29 @@ async function loadDealFields(force = false) {
       const t = (dealF[code] && dealF[code].title || '').trim().toLowerCase();
       if (t) dealTitleToCode[t] = code;
     });
-    // Код лида → его название
     const leadTitle = code => ((leadF[code] && leadF[code].title) || '').trim().toLowerCase();
+    const dealHasCode = code => !!(dealF && dealF[code]);
 
-    // Для каждого нужного поля лида ищем в сделках поле с тем же названием
+    // Для каждого нужного поля: 1) если ТОТ ЖЕ код есть в сделках — берём его;
+    //                          2) иначе ищем поле сделки с тем же названием.
     const wanted = { date:F.date, status:F.status, manager:F.manager, tm:F.tm, segment:F.segment, tmqual:F.tmqual };
-    DF = { journal: F.journalDeal };  // журнал знаем явно
+    DF = { journal: F.journalDeal };
     Object.keys(wanted).forEach(key => {
-      const lt = leadTitle(wanted[key]);
-      if (lt && dealTitleToCode[lt]) DF[key] = dealTitleToCode[lt];
+      const leadCode = wanted[key];
+      if (dealHasCode(leadCode)) { DF[key] = leadCode; return; }   // тот же код существует в сделках
+      const lt = leadTitle(leadCode);
+      if (lt && dealTitleToCode[lt]) { DF[key] = dealTitleToCode[lt]; return; }
     });
 
-    cacheSet('sh_deal_fields_v1', DF);
+    cacheSet('sh_deal_fields_v2', DF);
     const found = Object.keys(DF).filter(k => DF[k]);
     log('🧩 Поля сделки определены: ' + found.map(k => k + '=' + DF[k]).join(', '));
     const miss = ['date','status','manager','tm','segment'].filter(k => !DF[k]);
-    if (miss.length) log('⚠️ В сделках не нашлись поля: ' + miss.join(', ') + ' — встречи-сделки по ним считаться не будут.');
+    if (miss.length) {
+      log('⚠️ В сделках НЕ нашлись: ' + miss.join(', ') + '. Названия искомых полей: ' +
+          miss.map(k => k + '="' + leadTitle(wanted[k]) + '"').join(', ') +
+          '. Проверьте, что в сделках есть поля с такими названиями.');
+    }
   } catch (e) {
     log('⚠️ loadDealFields: ' + e.message);
     DF = null;
@@ -1352,10 +1366,16 @@ async function saveEntry() {
     let savedLeadId = null;
     if (saveToDeal) {
       // Пишем в СДЕЛКУ: переводим поля из лидовых кодов в коды сделки (DF).
-      const dfields = {
-        [DF.date]    : fields[F.date],
-        [DF.status]  : fields[F.status],
-      };
+      // Критично: без DF.date/DF.status запрос будет битым (ключ undefined → HTTP 400).
+      if (!DF.date || !DF.status) {
+        log('❌ Поля сделки не определены (date=' + DF.date + ', status=' + DF.status + '). Сохранение в сделку невозможно.');
+        alert('Не удалось определить поля встречи в сделке (дата/статус). Проверьте, что в сделках есть поля с теми же названиями, что в лидах. Сохранение отменено.');
+        btn.disabled = false; btn.textContent = 'Сохранить';
+        return;
+      }
+      const dfields = {};
+      dfields[DF.date]   = fields[F.date];
+      dfields[DF.status] = fields[F.status];
       if (DF.manager) dfields[DF.manager] = fields[F.manager];
       if (DF.tm)      dfields[DF.tm]      = fields[F.tm];
       if (DF.segment) dfields[DF.segment] = fields[F.segment];
@@ -1454,10 +1474,44 @@ async function deleteEntry() {
     alert('Эту встречу можно только просматривать — она назначена на другого менеджера.');
     return;
   }
-  if (!confirm('Удалить встречу (лид)?')) return;
+  if (!confirm('Удалить встречу? Сам лид/сделка останется, очистятся только данные встречи.')) return;
   try {
-    await apiOne('crm.lead.delete', { id: parseInt(editId) });
-    closeModal(); await loadData(true);
+    const isDeal = existing && existing.entity === 'deal';
+
+    // Очищаем ПОЛЯ ВСТРЕЧИ (дату, статус, менеджера, ТМ, журнал), а лид/сделку НЕ удаляем.
+    if (isDeal) {
+      if (!DF || !DF.date) { alert('Не определены поля встречи в сделке — удаление невозможно.'); return; }
+      const clear = {};
+      clear[DF.date]   = '';
+      if (DF.status)  clear[DF.status]  = '';
+      if (DF.manager) clear[DF.manager] = '';
+      if (DF.tm)      clear[DF.tm]      = '';
+      if (DF.journal) clear[DF.journal] = '';
+      await apiOne('crm.deal.update', { id: parseInt(editId), fields: clear });
+      log('🗑️ Встреча очищена в СДЕЛКЕ #' + editId + ' (сделка сохранена)');
+    } else {
+      const clear = {};
+      clear[F.date]   = '';
+      clear[F.status] = '';
+      clear[F.manager]= '';
+      clear[F.tm]     = '';
+      clear[F.journal]= '';
+      await apiOne('crm.lead.update', { id: parseInt(editId), fields: clear });
+      log('🗑️ Встреча очищена в ЛИДЕ #' + editId + ' (лид сохранён)');
+    }
+
+    // Убираем событие из календаря, если было
+    try {
+      if (existing && existing.calId) {
+        await apiOne('calendar.event.delete', { id: parseInt(existing.calId) });
+        log('🗑️ Событие календаря #' + existing.calId + ' удалено');
+      }
+    } catch (e) { log('⚠️ Удаление события календаря: ' + e.message); }
+
+    // Убираем из сетки локально
+    allEntries = allEntries.filter(e => e.id !== editId);
+    closeModal();
+    renderGrid(); renderAnalytics();
   } catch (e) { alert('Ошибка: ' + e.message); }
 }
 
@@ -2486,7 +2540,7 @@ function setStatus(msg, type='') {
   el.className   = 'status-bar' + (type ? ' '+type : '');
 }
 
-const BUILD_VERSION = 'shahmatka build 2026-07-30 #47 (фикс сдвига даты UTC→локальная)';
+const BUILD_VERSION = 'shahmatka build 2026-07-30 #49 (удаление=очистка встречи, журнал сделки UF_CRM_6A4F3FFF6EC59)';
 
 function log(msg) {
   const b = document.getElementById('debug-box');
