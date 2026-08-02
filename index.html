@@ -421,6 +421,20 @@ const F = {
   calId        : 'UF_CRM_SH_CALID',     // ID события календаря (чтобы не плодить дубли)
 };
 
+// Явные коды полей встречи в СДЕЛКАХ (боевые, заданы вручную).
+// В сделках много похожих тестовых полей ("Дата встречи №1/№2/№3"), поэтому
+// автоопределение по названию ненадёжно — задаём коды напрямую.
+// null → пробуем определить автоматически (loadDealFields). Известные заполнены.
+const DEAL_FIELDS_EXPLICIT = {
+  date    : 'UF_CRM_685BB7F11D48B',   // ⬅ боевая дата встречи в сделке
+  status  : null,                     // ← нужен код поля "Статус встречи" в сделке
+  manager : null,                     // ← нужен код поля "Менеджер ОП" в сделке
+  segment : null,                     // ← нужен код поля "Сегментация селлера" в сделке
+  tm      : 'UF_CRM_1675251074',      // определился автоматически (совпал с лидом)
+  tmqual  : null,
+  journal : 'UF_CRM_6A4F3FFF6EC59',
+};
+
 // Пороги сегментов (буква → сравнение и сумма в рублях), по которым ищем
 // нужный отдел в Б24 — сопоставляем не по точному тексту названия (он может
 // чуть отличаться пробелами/пунктуацией), а по числу и знаку "более/менее"
@@ -898,7 +912,7 @@ async function loadLeadSources(force = false) {
 // и отчёт по сделкам просто пропустит это поле (не сломается).
 async function loadDealFields(force = false) {
   try {
-    const cached = !force && cacheGet('sh_deal_fields_v2', 12 * 60 * 60 * 1000);
+    const cached = !force && cacheGet('sh_deal_fields_v3', 12 * 60 * 60 * 1000);
     if (cached) { DF = cached; log('🧩 Поля сделки (кэш): ' + JSON.stringify(DF)); return; }
 
     const [leadF, dealF] = await Promise.all([
@@ -920,13 +934,17 @@ async function loadDealFields(force = false) {
     const wanted = { date:F.date, status:F.status, manager:F.manager, tm:F.tm, segment:F.segment, tmqual:F.tmqual };
     DF = { journal: F.journalDeal };
     Object.keys(wanted).forEach(key => {
+      // 1) Явно заданный код имеет приоритет
+      if (DEAL_FIELDS_EXPLICIT[key]) { DF[key] = DEAL_FIELDS_EXPLICIT[key]; return; }
       const leadCode = wanted[key];
-      if (dealHasCode(leadCode)) { DF[key] = leadCode; return; }   // тот же код существует в сделках
+      // 2) тот же код существует в сделках
+      if (dealHasCode(leadCode)) { DF[key] = leadCode; return; }
+      // 3) поле сделки с тем же названием
       const lt = leadTitle(leadCode);
       if (lt && dealTitleToCode[lt]) { DF[key] = dealTitleToCode[lt]; return; }
     });
 
-    cacheSet('sh_deal_fields_v2', DF);
+    cacheSet('sh_deal_fields_v3', DF);
     const found = Object.keys(DF).filter(k => DF[k]);
     log('🧩 Поля сделки определены: ' + found.map(k => k + '=' + DF[k]).join(', '));
     const miss = ['date','status','manager','tm','segment'].filter(k => !DF[k]);
@@ -1046,13 +1064,17 @@ async function loadEntries(from, to, force = false) {
       log('⚠️ Сделки не загружены: ' + e.message);
     }
 
-    if (dealEntries.length) {
-      // Дедупликация: если лид сконвертирован в сделку (сделка знает его LEAD_ID) —
-      // считаем по сделке, а исходный лид убираем, чтобы не задвоить.
-      const convertedLeadIds = new Set(dealEntries.map(d => d.leadId).filter(Boolean));
-      const leadsKept = leadEntries.filter(l => !convertedLeadIds.has(String(l.id)));
+    // ── Дедупликация лид/сделка ──
+    // Сконвертированный лид (STATUS_ID=CONVERTED) не показываем в сетке:
+    // его встреча живёт в сделке. Это работает даже если сделка не загрузилась.
+    const convertedLeadIds = new Set(dealEntries.map(d => d.leadId).filter(Boolean));
+    const leadsKept = leadEntries.filter(l =>
+      !l.converted && !convertedLeadIds.has(String(l.id))
+    );
+    const droppedConverted = leadEntries.length - leadsKept.length;
+    if (dealEntries.length || droppedConverted) {
       log('🔗 Лид+сделка: лидов ' + leadEntries.length + ', сделок ' + dealEntries.length +
-          ', убрано сконвертированных лидов ' + (leadEntries.length - leadsKept.length));
+          ', убрано сконвертированных лидов ' + droppedConverted);
       return [...leadsKept, ...dealEntries];
     }
     return leadEntries;
@@ -1158,6 +1180,7 @@ function mapLead(item) {
     journal  : item[F.journal] || '',               // сырой журнал статусов
     calId    : String(item[F.calId] || ''),         // ID события календаря
     sourceId : String(item.SOURCE_ID || ''),        // источник лида (SOURCE_ID: WEB/CALL/AVITO…)
+    converted: item.STATUS_ID === 'CONVERTED',      // лид сконвертирован в сделку
     tmqual   : Array.isArray(item[F.tmqual]) ? item[F.tmqual].map(String)
                : (item[F.tmqual] ? [String(item[F.tmqual])] : []),   // статус ТМ квалификации
   };
@@ -1232,12 +1255,22 @@ async function syncActivity(leadId, mgrId, start, title, existingCalId) {
 // Создаём/обновляем встречу у менеджера.
 // Сначала пробуем настоящий календарь (право «Календарь»), при отсутствии прав —
 // запасной вариант через CRM-дело «Встреча» (право crm, есть всегда).
-async function syncCalendar(leadId, mgrId, dtVal, title, existingCalId) {
+async function syncCalendar(leadId, mgrId, dtVal, title, existingCalId, isDeal) {
   if (!mgrId || !dtVal) return existingCalId || '';
   const start = new Date(dtVal);
   if (isNaN(start)) return existingCalId || '';
 
-  // Если ранее уже создали CRM-дело — продолжаем работать с делом.
+  // Куда писать обратно ID события календаря: в сделку или в лид.
+  const writeCalId = async (evId) => {
+    try {
+      if (isDeal && DF && DF.calId) {
+        await apiOne('crm.deal.update', { id: parseInt(leadId), fields: { [DF.calId]: String(evId) } });
+      } else if (!isDeal) {
+        await apiOne('crm.lead.update', { id: parseInt(leadId), fields: { [F.calId]: String(evId) } });
+      }
+    } catch (e) { /* поле calId может отсутствовать в сделке — не критично */ }
+  };
+
   if (existingCalId && String(existingCalId).indexOf('act:') === 0) {
     try { return await syncActivity(leadId, mgrId, start, title, existingCalId); }
     catch (e) { log('⚠️ Не удалось обновить дело «Встреча»: ' + e.message); return existingCalId; }
@@ -1249,7 +1282,7 @@ async function syncCalendar(leadId, mgrId, dtVal, title, existingCalId) {
     from: fmtCalDT(start),
     to:   fmtCalDT(new Date(start.getTime() + 60 * 60 * 1000)),
     skipTime: 'N',
-    description: 'Встреча из шахматки. Лид #' + leadId,
+    description: 'Встреча из шахматки. ' + (isDeal ? 'Сделка' : 'Лид') + ' #' + leadId,
     accessibility: 'busy',
     attendees: [parseInt(mgrId)],
     host: parseInt(mgrId),
@@ -1261,11 +1294,10 @@ async function syncCalendar(leadId, mgrId, dtVal, title, existingCalId) {
       return existingCalId;
     }
     const evId = await apiOne('calendar.event.add', params);
-    try { await apiOne('crm.lead.update', { id: parseInt(leadId), fields: { [F.calId]: String(evId) } }); } catch (e) {}
+    await writeCalId(evId);
     log('📅 Событие календаря создано (#' + evId + ') у менеджера ' + mgrId);
     return String(evId);
   } catch (e) {
-    // Нет права «Календарь» — уходим в запасной вариант (CRM-дело).
     if (/scope/i.test(e.message) || /401/.test(e.message)) {
       log('ℹ️ Нет права «Календарь» — ставлю встречу как CRM-дело (запасной вариант).');
       try { return await syncActivity(leadId, mgrId, start, title, existingCalId); }
@@ -1402,7 +1434,7 @@ async function saveEntry() {
       const exEntry = allEntries.find(x => x.id === String(savedLeadId));
       const existingCalId = exEntry ? exEntry.calId : '';
       if (dtVal) await syncCalendar(savedLeadId, mgrId, dtVal + ':00',
-        (client || (source === 'own' ? 'Своя встреча' : 'Встреча от ТМ')), existingCalId);
+        (client || (source === 'own' ? 'Своя встреча' : 'Встреча от ТМ')), existingCalId, saveToDeal);
     } catch (e) { log('⚠️ syncCalendar: ' + e.message); }
 
     closeModal();
@@ -1759,6 +1791,7 @@ function entryStartMs(e) {
 function emptyCounters() {
   return { total:0, mv_done:0, mv_gtm:0, mv_cancel:0, mv_gtm_cancel:0, mv_gtm_done:0,
            done:0, cancelAll:0, confirmedAny:0, movedAny:0, noShow:0, movesTotal:0, gtmAll:0,
+           conf_cancel:0, conf_moved:0,
            durDoneSum:0, durDoneN:0, firstMoveSum:0, firstMoveN:0, hang:0 };
 }
 
@@ -1776,6 +1809,13 @@ function countGroup(es) {
     const hasMoved = seq.includes('moved');
     const hasGtm   = seq.includes('given_tm');
     if (seq.includes('confirmed') || final === 'confirmed') c.confirmedAny++;
+    // Подтверждена → Отмена / Перенесена: был confirmed, и ПОСЛЕ него в цепочке cancel/moved
+    const confIdx = seq.indexOf('confirmed');
+    if (confIdx !== -1) {
+      const after = seq.slice(confIdx + 1);
+      if (after.includes('cancel')) c.conf_cancel++;
+      if (after.includes('moved'))  c.conf_moved++;
+    }
     if (final === 'done')   c.done++;
     if (final === 'cancel') c.cancelAll++;
     if (hasMoved) c.movedAny++;
@@ -1916,6 +1956,8 @@ function renderAnalytics() {
     // ── Исходы встреч, шт ──
     { sec:'Исходы встреч, шт', label:'Всего назначено',              title:'Все назначенные встречи за период', fmt:c=>c.total||0 },
     { sec:'Исходы встреч, шт', label:'Подтверждено',                 title:'Дошли до статуса Подтверждена', fmt:c=>c.confirmedAny||'' },
+    { sec:'Исходы встреч, шт', label:'Подтв. → Отмена',             title:'Была Подтверждена, затем Отмена', fmt:c=>c.conf_cancel||'' },
+    { sec:'Исходы встреч, шт', label:'Подтв. → Перенос',            title:'Была Подтверждена, затем Перенесена', fmt:c=>c.conf_moved||'' },
     { sec:'Исходы встреч, шт', label:'Перенос → Проведено',          title:'Был перенос, без ТМ, финал проведено', fmt:c=>c.mv_done||'' },
     { sec:'Исходы встреч, шт', label:'Перенос → Отдано в ТМ',        title:'Перенос, затем отдано в ТМ (в работе)', fmt:c=>c.mv_gtm||'' },
     { sec:'Исходы встреч, шт', label:'Перенос → Отмена',             title:'Перенос, без ТМ, финал отмена', fmt:c=>c.mv_cancel||'' },
@@ -2540,7 +2582,7 @@ function setStatus(msg, type='') {
   el.className   = 'status-bar' + (type ? ' '+type : '');
 }
 
-const BUILD_VERSION = 'shahmatka build 2026-07-30 #49 (удаление=очистка встречи, журнал сделки UF_CRM_6A4F3FFF6EC59)';
+const BUILD_VERSION = 'shahmatka build 2026-07-30 #52 (отчёт: +Подтв→Отмена, +Подтв→Перенос)';
 
 function log(msg) {
   const b = document.getElementById('debug-box');
