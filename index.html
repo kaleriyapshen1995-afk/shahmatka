@@ -432,7 +432,8 @@ const DEAL_FIELDS_EXPLICIT = {
   segment : 'UF_CRM_1673030308',      // сегментация селлера в сделке
   tm      : 'UF_CRM_1675251074',      // телемаркетолог (совпал с лидом)
   tmqual  : 'UF_CRM_669F648A78B94',   // статус ТМ квалификации в сделке
-  journal : 'UF_CRM_6A4F3FFF6EC59',
+  journal : 'UF_CRM_6A4F3FFF6EC59',   // журнал статусов в сделке
+  calId   : 'UF_CRM_1785738923',      // ID события календаря в сделке (аналог UF_CRM_SH_CALID)
 };
 
 // Пороги сегментов (буква → сравнение и сумма в рублях), по которым ищем
@@ -928,8 +929,9 @@ async function loadDealFields(force = false) {
 
     // Для каждого нужного поля: 1) если ТОТ ЖЕ код есть в сделках — берём его;
     //                          2) иначе ищем поле сделки с тем же названием.
-    const wanted = { date:F.date, status:F.status, manager:F.manager, tm:F.tm, segment:F.segment, tmqual:F.tmqual };
+    const wanted = { date:F.date, status:F.status, manager:F.manager, tm:F.tm, segment:F.segment, tmqual:F.tmqual, calId:F.calId };
     DF = { journal: F.journalDeal };
+    if (DEAL_FIELDS_EXPLICIT.calId) DF.calId = DEAL_FIELDS_EXPLICIT.calId;
     Object.keys(wanted).forEach(key => {
       // 1) Явно заданный код имеет приоритет
       if (DEAL_FIELDS_EXPLICIT[key]) { DF[key] = DEAL_FIELDS_EXPLICIT[key]; return; }
@@ -941,7 +943,7 @@ async function loadDealFields(force = false) {
       if (lt && dealTitleToCode[lt]) { DF[key] = dealTitleToCode[lt]; return; }
     });
 
-    cacheSet('sh_deal_fields_v5', DF);
+    cacheSet('sh_deal_fields_v6', DF);
     const found = Object.keys(DF).filter(k => DF[k]);
     log('🧩 Поля сделки определены: ' + found.map(k => k + '=' + DF[k]).join(', '));
     const miss = ['date','status','manager','tm','segment'].filter(k => !DF[k]);
@@ -1129,7 +1131,7 @@ async function loadDealEntries(from, to) {
   if (cached) { log('📅 Сделки за период: ' + cached.length + ' (кэш)'); return cached.map(mapDeal).filter(Boolean); }
 
   const SELECT = ['ID','TITLE','STATUS_ID','SOURCE_ID','ASSIGNED_BY_ID','CREATED_BY_ID','LEAD_ID',
-                  DF.date, DF.status, DF.manager, DF.tm, DF.segment, DF.tmqual, DF.journal].filter(Boolean);
+                  DF.date, DF.status, DF.manager, DF.tm, DF.segment, DF.tmqual, DF.journal, DF.calId].filter(Boolean);
   const rangeFilter = { ['>=' + DF.date]: from + 'T00:00:00', ['<=' + DF.date]: to + 'T23:59:59' };
   const ORDER = { [DF.date]: 'ASC' };
 
@@ -1237,6 +1239,7 @@ function mapDeal(item) {
   if (DF.segment) shim[F.segment] = enumD2L.segment[String(item[DF.segment])] || item[DF.segment];
   if (DF.tmqual)  shim[F.tmqual]  = item[DF.tmqual];
   if (DF.journal) shim[F.journal] = item[DF.journal];
+  if (DF.calId)   shim[F.calId]   = item[DF.calId];
 
   const mapped = mapLead(shim);
   mapped.entity = 'deal';
@@ -2620,7 +2623,7 @@ function setStatus(msg, type='') {
   el.className   = 'status-bar' + (type ? ' '+type : '');
 }
 
-const BUILD_VERSION = 'shahmatka build 2026-07-30 #56 (правильное поле статуса встречи в сделке)';
+const BUILD_VERSION = 'shahmatka build 2026-07-30 #57 (календарь для сделки: calId UF_CRM_1785738923)';
 
 function log(msg) {
   const b = document.getElementById('debug-box');
@@ -3000,7 +3003,7 @@ async function showDealMeeting(dealId) {
   if (!DF || !DF.date) { log('⚠️ Не определены поля встречи в сделках — не могу показать встречу сделки.'); return; }
 
   const SELECT = ['ID','TITLE','STATUS_ID','SOURCE_ID','ASSIGNED_BY_ID','CREATED_BY_ID','LEAD_ID',
-                  DF.date, DF.status, DF.manager, DF.tm, DF.segment, DF.tmqual, DF.journal].filter(Boolean);
+                  DF.date, DF.status, DF.manager, DF.tm, DF.segment, DF.tmqual, DF.journal, DF.calId].filter(Boolean);
   const deal = await apiOne('crm.deal.get', { id: parseInt(dealId), select: SELECT });
   if (!deal) { log('❌ Сделка #' + dealId + ' не найдена'); return; }
 
