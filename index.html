@@ -427,11 +427,11 @@ const F = {
 // null → пробуем определить автоматически (loadDealFields). Известные заполнены.
 const DEAL_FIELDS_EXPLICIT = {
   date    : 'UF_CRM_685BB7F11D48B',   // дата встречи в сделке
-  status  : 'UF_CRM_669F648A78B94',   // статус встречи в сделке
+  status  : 'UF_CRM_6A69E00CE2DEB',   // СТАТУС ВСТРЕЧИ в сделке (Назначена/Проведена/...)
   manager : 'UF_CRM_6A33A9B05C12A',   // менеджер ОП в сделке
   segment : 'UF_CRM_1673030308',      // сегментация селлера в сделке
   tm      : 'UF_CRM_1675251074',      // телемаркетолог (совпал с лидом)
-  tmqual  : null,
+  tmqual  : 'UF_CRM_669F648A78B94',   // статус ТМ квалификации в сделке
   journal : 'UF_CRM_6A4F3FFF6EC59',
 };
 
@@ -912,9 +912,6 @@ async function loadLeadSources(force = false) {
 // и отчёт по сделкам просто пропустит это поле (не сломается).
 async function loadDealFields(force = false) {
   try {
-    const cached = !force && cacheGet('sh_deal_fields_v4', 12 * 60 * 60 * 1000);
-    if (cached) { DF = cached; log('🧩 Поля сделки (кэш): ' + JSON.stringify(DF)); return; }
-
     const [leadF, dealF] = await Promise.all([
       apiOne('crm.lead.fields', {}),
       apiOne('crm.deal.fields', {}),
@@ -944,7 +941,7 @@ async function loadDealFields(force = false) {
       if (lt && dealTitleToCode[lt]) { DF[key] = dealTitleToCode[lt]; return; }
     });
 
-    cacheSet('sh_deal_fields_v4', DF);
+    cacheSet('sh_deal_fields_v5', DF);
     const found = Object.keys(DF).filter(k => DF[k]);
     log('🧩 Поля сделки определены: ' + found.map(k => k + '=' + DF[k]).join(', '));
     const miss = ['date','status','manager','tm','segment'].filter(k => !DF[k]);
@@ -953,10 +950,48 @@ async function loadDealFields(force = false) {
           miss.map(k => k + '="' + leadTitle(wanted[k]) + '"').join(', ') +
           '. Проверьте, что в сделках есть поля с такими названиями.');
     }
+
+    // ── Карты перевода значений списков лид↔сделка (ID разные, текст одинаковый) ──
+    // Сегмент: лидовый ID → сделочный ID и обратно (сопоставляем по букве/тексту).
+    buildEnumMap('segment', leadF[F.segment], dealF[DF.segment]);
+    // Статус встречи: лидовый ID → сделочный ID (сопоставляем по тексту значения).
+    buildEnumMap('status', leadF[F.status], dealF[DF.status]);
   } catch (e) {
     log('⚠️ loadDealFields: ' + e.message);
     DF = null;
   }
+}
+
+// Карты перевода ID значений списков между лидом и сделкой (по тексту).
+const enumL2D = { segment:{}, status:{} };  // лидовый ID → сделочный ID
+const enumD2L = { segment:{}, status:{} };  // сделочный ID → лидовый ID
+
+function normEnumText(v) {
+  // Нормализуем текст значения: убираем кавычки, лишние пробелы, регистр,
+  // приводим кириллические буквы сегмента к латинице.
+  let s = String(v || '').toLowerCase().replace(/["'«»]/g,'').replace(/\s+/g,' ').trim();
+  const m = s.match(/^([a-zа-я])\s*[-—]/);
+  if (m) { const lat = normalizeSegLetter(m[1]); s = lat.toLowerCase() + s.slice(1); }
+  return s;
+}
+
+function buildEnumMap(kind, leadDef, dealDef) {
+  enumL2D[kind] = {}; enumD2L[kind] = {};
+  const li = (leadDef && leadDef.items) || [];
+  const di = (dealDef && dealDef.items) || [];
+  if (!li.length || !di.length) { log('ℹ️ Карта ' + kind + ' лид↔сделка: нет items ('+li.length+'/'+di.length+')'); return; }
+  const dealByText = {};
+  di.forEach(it => { dealByText[normEnumText(it.VALUE)] = String(it.ID); });
+  let matched = 0;
+  li.forEach(it => {
+    const t = normEnumText(it.VALUE);
+    if (dealByText[t]) {
+      enumL2D[kind][String(it.ID)] = dealByText[t];
+      enumD2L[kind][dealByText[t]] = String(it.ID);
+      matched++;
+    }
+  });
+  log('🔁 Карта ' + kind + ' лид↔сделка: сопоставлено ' + matched + ' из ' + li.length);
 }
 
 // Список менеджеров для выбранного значения сегмента (по ID значения поля).
@@ -1195,10 +1230,11 @@ function mapDeal(item) {
     SOURCE_ID: item.SOURCE_ID, ASSIGNED_BY_ID: item.ASSIGNED_BY_ID, CREATED_BY_ID: item.CREATED_BY_ID,
   };
   if (DF.date)    shim[F.date]    = item[DF.date];
-  if (DF.status)  shim[F.status]  = item[DF.status];
+  // Статус и сегмент — переводим сделочный ID значения в лидовый (списки разные).
+  if (DF.status)  shim[F.status]  = enumD2L.status[String(item[DF.status])] || item[DF.status];
   if (DF.manager) shim[F.manager] = item[DF.manager];
   if (DF.tm)      shim[F.tm]      = item[DF.tm];
-  if (DF.segment) shim[F.segment] = item[DF.segment];
+  if (DF.segment) shim[F.segment] = enumD2L.segment[String(item[DF.segment])] || item[DF.segment];
   if (DF.tmqual)  shim[F.tmqual]  = item[DF.tmqual];
   if (DF.journal) shim[F.journal] = item[DF.journal];
 
@@ -1407,10 +1443,12 @@ async function saveEntry() {
       }
       const dfields = {};
       dfields[DF.date]   = fields[F.date];
-      dfields[DF.status] = fields[F.status];
+      // Статус: лидовый ID значения → сделочный (списки разные)
+      dfields[DF.status] = enumL2D.status[String(fields[F.status])] || fields[F.status];
       if (DF.manager) dfields[DF.manager] = fields[F.manager];
       if (DF.tm)      dfields[DF.tm]      = fields[F.tm];
-      if (DF.segment) dfields[DF.segment] = fields[F.segment];
+      // Сегмент: лидовый ID значения → сделочный
+      if (DF.segment) dfields[DF.segment] = enumL2D.segment[String(fields[F.segment])] || fields[F.segment];
       if (DF.tmqual)  dfields[DF.tmqual]  = fields[F.tmqual];
       if (DF.journal) dfields[DF.journal] = fields[F.journal];
       await apiOne('crm.deal.update', { id: parseInt(dealTargetId), fields: dfields });
@@ -2582,7 +2620,7 @@ function setStatus(msg, type='') {
   el.className   = 'status-bar' + (type ? ' '+type : '');
 }
 
-const BUILD_VERSION = 'shahmatka build 2026-07-30 #54 (все поля сделки прописаны)';
+const BUILD_VERSION = 'shahmatka build 2026-07-30 #56 (правильное поле статуса встречи в сделке)';
 
 function log(msg) {
   const b = document.getElementById('debug-box');
