@@ -1328,9 +1328,21 @@ async function syncCalendar(leadId, mgrId, dtVal, title, existingCalId, isDeal) 
   };
   try {
     if (existingCalId) {
-      await apiOne('calendar.event.update', { id: parseInt(existingCalId), ...params });
-      log('📅 Событие календаря обновлено (#' + existingCalId + ') у менеджера ' + mgrId);
-      return existingCalId;
+      // Проверяем, что событие ещё существует (могли удалить вручную).
+      // Если его нет — не пытаемся обновлять "пустоту", а создаём заново.
+      let exists = false;
+      try {
+        const ev = await apiOne('calendar.event.getbyid', { id: parseInt(existingCalId) });
+        exists = !!(ev && (ev.ID || (Array.isArray(ev) && ev.length)));
+      } catch (e) { exists = false; }
+
+      if (exists) {
+        await apiOne('calendar.event.update', { id: parseInt(existingCalId), ...params });
+        log('📅 Событие календаря обновлено (#' + existingCalId + ') у менеджера ' + mgrId);
+        return existingCalId;
+      }
+      log('ℹ️ Прежнее событие #' + existingCalId + ' не найдено — создаю новое.');
+      // проваливаемся ниже к созданию
     }
     const evId = await apiOne('calendar.event.add', params);
     await writeCalId(evId);
@@ -2623,7 +2635,7 @@ function setStatus(msg, type='') {
   el.className   = 'status-bar' + (type ? ' '+type : '');
 }
 
-const BUILD_VERSION = 'shahmatka build 2026-07-30 #57 (календарь для сделки: calId UF_CRM_1785738923)';
+const BUILD_VERSION = 'shahmatka build 2026-07-30 #58 (календарь: пересоздание, если событие удалено)';
 
 function log(msg) {
   const b = document.getElementById('debug-box');
