@@ -1410,16 +1410,21 @@ async function saveEntry() {
     // ВАЖНО: ASSIGNED_BY_ID (ответственный лида) намеренно НЕ включаем — он остаётся прежним.
 
     // ── Определяем ЦЕЛЕВУЮ СУЩНОСТЬ (куда писать: лид или сделка) ──
-    // Встреча "переезжает" в сделку после конвертации. Если редактируем
-    // встречу-сделку или активная сущность = сделка — пишем в СДЕЛКУ.
     let saveToDeal = false, dealTargetId = null;
-    if (editId) {
+    // Приоритет: если шахматка открыта ИЗ КАРТОЧКИ СДЕЛКИ — пишем в эту сделку.
+    if (currentDealId && !currentLeadId) {
+      saveToDeal = true; dealTargetId = currentDealId;
+      log('🎯 Цель сохранения: контекст СДЕЛКИ #' + dealTargetId);
+    } else if (editId) {
       const ex = allEntries.find(x => x.id === String(editId));
       if (ex && ex.entity === 'deal') { saveToDeal = true; dealTargetId = editId; }
+      log('🎯 Цель сохранения: editId=' + editId + ', entity=' + (ex ? ex.entity : '?') +
+          ' → ' + (saveToDeal ? 'СДЕЛКА #'+dealTargetId : 'ЛИД'));
     } else if (activeEntity && activeEntity.type === 'deal') {
       saveToDeal = true; dealTargetId = activeEntity.id;
-    } else if (currentDealId && !currentLeadId) {
-      saveToDeal = true; dealTargetId = currentDealId;
+      log('🎯 Цель сохранения: activeEntity=сделка #' + dealTargetId);
+    } else {
+      log('🎯 Цель сохранения: ЛИД (currentLeadId=' + currentLeadId + ', editId=' + editId + ')');
     }
 
     if (saveToDeal && (!DF || !DF.date)) {
@@ -2642,7 +2647,7 @@ function setStatus(msg, type='') {
   el.className   = 'status-bar' + (type ? ' '+type : '');
 }
 
-const BUILD_VERSION = 'shahmatka build 2026-07-30 #59 (фикс перечтения сделки + диагностика календаря)';
+const BUILD_VERSION = 'shahmatka build 2026-07-30 #60 (контекст сделки — приоритет при сохранении)';
 
 function log(msg) {
   const b = document.getElementById('debug-box');
