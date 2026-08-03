@@ -1333,7 +1333,9 @@ async function syncCalendar(leadId, mgrId, dtVal, title, existingCalId, isDeal) 
       let exists = false;
       try {
         const ev = await apiOne('calendar.event.getbyid', { id: parseInt(existingCalId) });
-        exists = !!(ev && (ev.ID || (Array.isArray(ev) && ev.length)));
+        const evObj = Array.isArray(ev) ? ev[0] : ev;
+        exists = !!(evObj && evObj.ID);
+        if (evObj) log('🔎 Событие #' + existingCalId + ': владелец OWNER_ID=' + (evObj.OWNER_ID||evObj.CAL_TYPE) + ', ожидался менеджер ' + mgrId);
       } catch (e) { exists = false; }
 
       if (exists) {
@@ -1502,18 +1504,24 @@ async function saveEntry() {
       log('⚠️ Не удалось обновить период после сохранения: ' + e.message);
     }
 
-    // Гарантированно подтягиваем только что сохранённый лид и добавляем в сетку.
+    // Гарантированно подтягиваем только что сохранённую встречу и добавляем в сетку.
+    // ВАЖНО: читаем из ТОЙ ЖЕ сущности, куда сохраняли (сделка или лид),
+    // иначе crm.lead.get с ID сделки даёт HTTP 400.
     if (savedLeadId) {
       try {
-        const lead = await apiOne('crm.lead.get', { id: parseInt(savedLeadId) });
-        if (lead) {
-          const mapped = mapLead(lead);
-          log('💾 Сохранено: лид #' + savedLeadId +
-              ' | поле менеджера ' + F.manager + '=' + JSON.stringify(lead[F.manager]) +
-              ' | ответственный ASSIGNED_BY_ID=' + lead.ASSIGNED_BY_ID +
-              ' | дата ' + F.date + '=' + JSON.stringify(lead[F.date]));
-          log('💾 mapped → mgr=' + mapped.mgr + ', date=' + mapped.date + ', slot=' + mapped.slot);
-
+        let mapped;
+        if (saveToDeal) {
+          const SELECT = ['ID','TITLE','STATUS_ID','SOURCE_ID','ASSIGNED_BY_ID','CREATED_BY_ID','LEAD_ID',
+                          DF.date, DF.status, DF.manager, DF.tm, DF.segment, DF.tmqual, DF.journal, DF.calId].filter(Boolean);
+          const deal = await apiOne('crm.deal.get', { id: parseInt(savedLeadId), select: SELECT });
+          mapped = deal ? mapDeal(deal) : null;
+          if (mapped) log('💾 Перечитана СДЕЛКА #' + savedLeadId + ' → date=' + mapped.date + ', mgr=' + mapped.mgr + ', status=' + mapped.status);
+        } else {
+          const lead = await apiOne('crm.lead.get', { id: parseInt(savedLeadId) });
+          mapped = lead ? mapLead(lead) : null;
+          if (mapped) log('💾 Перечитан ЛИД #' + savedLeadId + ' → date=' + mapped.date + ', mgr=' + mapped.mgr + ', status=' + mapped.status);
+        }
+        if (mapped) {
           const curKey = dateKey(currentDate);
           if (period === 'day' && mapped.date && mapped.date !== curKey) {
             const [y, m, d] = mapped.date.split('-').map(Number);
@@ -1529,7 +1537,6 @@ async function saveEntry() {
               const uu = Array.isArray(u) ? u[0] : u;
               const nm = uu ? ((uu.NAME || '') + ' ' + (uu.LAST_NAME || '')).trim() : ('Пользователь #' + mapped.mgr);
               managers.push({ id: mapped.mgr, name: nm });
-              log('➕ Менеджер #' + mapped.mgr + ' (' + nm + ') добавлен в сетку');
             } catch (e) {
               managers.push({ id: mapped.mgr, name: 'Пользователь #' + mapped.mgr });
             }
@@ -1539,10 +1546,10 @@ async function saveEntry() {
           allEntries.push(mapped);
           renderGrid();
           renderAnalytics();
-          log('✅ Лид #' + savedLeadId + ' в сетке. Всего встреч: ' + allEntries.length);
+          log('✅ Встреча #' + savedLeadId + ' в сетке. Всего встреч: ' + allEntries.length);
         }
       } catch (e) {
-        log('⚠️ Не удалось подтянуть свежий лид #' + savedLeadId + ': ' + e.message);
+        log('⚠️ Не удалось подтянуть свежую встречу #' + savedLeadId + ': ' + e.message);
       }
     }
   } catch (e) {
@@ -2635,7 +2642,7 @@ function setStatus(msg, type='') {
   el.className   = 'status-bar' + (type ? ' '+type : '');
 }
 
-const BUILD_VERSION = 'shahmatka build 2026-07-30 #58 (календарь: пересоздание, если событие удалено)';
+const BUILD_VERSION = 'shahmatka build 2026-07-30 #59 (фикс перечтения сделки + диагностика календаря)';
 
 function log(msg) {
   const b = document.getElementById('debug-box');
