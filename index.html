@@ -31,7 +31,6 @@
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Inter',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--ink-700);font-size:13px;font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
 h1,h2,h3,h4,strong,.mgr-cell{font-family:'Manrope','Inter',system-ui,sans-serif}
-
 /* ── Топбар ── */
 .topbar{background:var(--navy-800);border-bottom:none;padding:14px 20px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;position:sticky;top:0;z-index:10;box-shadow:0 2px 14px rgba(20,38,63,.22)}
 .topbar strong{font-size:18px;font-weight:800;color:#fff;letter-spacing:-.01em}
@@ -49,13 +48,11 @@ select{font-family:'Inter'}
 .btn-primary:hover{background:var(--primary-600)!important}
 .status-bar{font-size:11px;color:rgba(255,255,255,.8);margin-left:auto}
 .status-bar.error{color:#ffb4ac;font-weight:600}.status-bar.loading{color:#bcd3fb}
-
 /* ── Переключатель Шахматка/Отчёт (в тулбаре) ── */
 .view-switch{display:flex;gap:4px;background:rgba(255,255,255,.10);padding:3px;border-radius:11px}
 .vs-btn{padding:6px 15px;border:1px solid transparent;border-radius:8px;background:transparent;font-family:'Manrope';font-size:12px;font-weight:700;color:rgba(255,255,255,.72);cursor:pointer;transition:.15s}
 .vs-btn:hover{color:#fff}
 .vs-btn.active{background:#fff;color:var(--navy-900);box-shadow:var(--shadow-sm)}
-
 /* ── Сетка ── */
 .main{padding:16px 20px}
 .grid-wrap{overflow-x:auto;border-radius:var(--radius);border:1px solid var(--line);background:var(--white);box-shadow:var(--shadow-sm)}
@@ -75,12 +72,10 @@ td.slot.current-lead-slot{background:var(--blue-100)}
 .s-cancel{background:var(--st-cancel)}
 .s-own{background:var(--st-own)}
 .s-giventm{background:var(--st-giventm)}
-
 /* ── Легенда ── */
 .legend{display:flex;gap:14px;flex-wrap:wrap;margin:14px 2px}
 .leg{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--ink-500);font-weight:500}
 .leg-dot{width:11px;height:11px;border-radius:3px;flex-shrink:0}
-
 /* ── Аналитика ── */
 .section-title{font-family:'Manrope';font-size:18px;font-weight:800;color:var(--navy-900);margin-bottom:10px;margin-top:22px;display:flex;align-items:center;gap:8px}
 .analytics{background:var(--white);border-radius:var(--radius);border:1px solid var(--line);overflow:hidden;box-shadow:var(--shadow-sm)}
@@ -166,10 +161,8 @@ td.slot.current-lead-slot{background:var(--blue-100)}
 .cr-good{color:var(--st-done);font-weight:700}
 .cr-mid{color:var(--st-moved);font-weight:700}
 .cr-low{color:var(--st-cancel);font-weight:700}
-
 /* ── Баннер лида ── */
 #lead-banner{display:none;background:var(--blue-50);border-bottom:1px solid var(--blue-200);padding:10px 20px;font-size:12px;font-weight:500;color:var(--blue-700)}
-
 /* ── Модалка ── */
 .modal-bg{display:none;position:fixed;inset:0;background:rgba(22,32,43,.45);z-index:100;align-items:flex-start;justify-content:center;padding:40px 12px;overflow-y:auto;backdrop-filter:blur(2px)}
 .modal-bg.open{display:flex}
@@ -187,38 +180,30 @@ td.slot.current-lead-slot{background:var(--blue-100)}
 .btn-cancel-m:hover{border-color:var(--blue-500);color:var(--blue-700)}
 .btn-del{background:#fff;color:var(--st-cancel);border:1px solid #f3c4c4;padding:10px 18px;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer}
 .btn-del:hover{background:#fef2f2}
-
 /* ── Debug ── */
 .debug-box{margin-top:14px;background:var(--white);border:1px solid var(--line);border-radius:var(--radius);padding:12px 16px;font-size:11px;color:var(--ink-500);line-height:1.9;display:none;font-family:'Inter'}
 .loader{text-align:center;padding:44px;color:var(--ink-500)}
 </style>
 </head>
 <body>
-
 <div id="lead-banner">
   📎 Назначение встречи для лида: <strong id="lead-banner-title"></strong>
   <a href="javascript:void(0)" onclick="clearLead()" style="margin-left:12px;color:#888;font-size:11px">✕ убрать</a>
 </div>
-
 <div id="placement-banner" style="display:none;background:#FFF8E1;border-bottom:1px solid #F0DDA0;padding:8px 16px;font-size:12px;color:#8a6d00">
   ⚙️ Вкладка «Шахматка» ещё не привязана к карточке лида/сделки.
   <a href="javascript:void(0)" onclick="registerPlacements()" style="margin-left:8px;color:#185FA5;font-weight:600">Привязать сейчас</a>
   <span id="placement-status" style="margin-left:8px"></span>
 </div>
-
 <div class="topbar">
   <strong>Шахматка встреч</strong>
-
   <div class="divider"></div>
-
   <div class="view-switch" id="view-switch">
     <button class="vs-btn active" id="vs-grid" onclick="setView('grid')">🗓️ Шахматка</button>
     <button class="vs-btn" id="vs-report" onclick="setView('report')">📊 Отчёт</button>
     <button class="vs-btn" id="vs-decomp" onclick="setView('decomp')">📈 Декомпозиция</button>
   </div>
-
   <div class="divider"></div>
-
   <div class="tab-group" id="period-tabs">
     <button class="tab-btn active" data-period="day" onclick="setPeriod('day',this)">День</button>
     <button class="tab-btn" data-period="week" onclick="setPeriod('week',this)">Неделя</button>
@@ -226,31 +211,24 @@ td.slot.current-lead-slot{background:var(--blue-100)}
     <button class="tab-btn" data-period="quarter" onclick="setPeriod('quarter',this)">Квартал</button>
     <button class="tab-btn" data-period="range" onclick="setPeriod('range',this)">Диапазон</button>
   </div>
-
   <input type="date" id="date-pick" onchange="onDateChange()">
-
   <div id="range-inputs" style="display:none;gap:6px;align-items:center">
     <input type="date" id="date-from" onchange="onRangeChange()">
     <span style="font-size:12px;color:#888">—</span>
     <input type="date" id="date-to" onchange="onRangeChange()">
   </div>
-
   <div class="divider"></div>
-
   <select id="mgr-filter" onchange="renderGrid();renderAnalytics();if(currentView==='decomp')renderDecomp()" style="font-size:12px;padding:7px 10px;border:1px solid var(--line);border-radius:9px;height:34px;max-width:170px;color:var(--ink-700)">
     <option value="">Все менеджеры</option>
   </select>
-
   <select id="segment-filter" onchange="onSegmentFilterChange()" style="font-size:12px;padding:7px 10px;border:1px solid var(--line);border-radius:9px;height:34px;max-width:210px;color:var(--ink-700)">
     <option value="">Все сегменты</option>
   </select>
-
   <button class="btn-refresh btn-primary" onclick="reloadAll()">↻ Обновить</button>
   <button class="btn-refresh" onclick="clearAllCache()" title="Полностью очистить локальный кэш и перезагрузить страницу">🧹 Очистить кэш</button>
   <button class="btn-refresh btn-primary" id="btn-bind" onclick="registerPlacements()">📎 Привязать к лидам/сделкам</button>
   <span class="status-bar" id="status">Инициализация...</span>
 </div>
-
 <div class="main">
   <!-- ═══ ВКЛАДКА: ШАХМАТКА ═══ -->
   <div id="view-grid">
@@ -258,7 +236,6 @@ td.slot.current-lead-slot{background:var(--blue-100)}
       <div id="grid-loader" class="loader">Загружаем данные из Б24...</div>
       <table id="grid" style="display:none"></table>
     </div>
-
     <div class="legend">
       <div class="leg"><div class="leg-dot" style="background:var(--st-assigned)"></div>Назначена (ТМ)</div>
       <div class="leg"><div class="leg-dot" style="background:var(--st-own)"></div>Своя</div>
@@ -269,13 +246,11 @@ td.slot.current-lead-slot{background:var(--blue-100)}
       <div class="leg"><div class="leg-dot" style="background:var(--st-giventm)"></div>Отдано в ТМ</div>
     </div>
   </div>
-
   <!-- ═══ ВКЛАДКА: ОТЧЁТ ═══ -->
   <div id="view-report" style="display:none">
     <div class="section-title">
       Аналитика за период
     </div>
-
     <div class="breakdown-switch">
       <span class="bd-lbl">Разрез:</span>
       <button class="bd-btn active" data-bd="mgr"     onclick="setBreakdown('mgr',this)">По менеджерам</button>
@@ -283,26 +258,22 @@ td.slot.current-lead-slot{background:var(--blue-100)}
       <button class="bd-btn"        data-bd="source"  onclick="setBreakdown('source',this)">По источнику лида</button>
       <button class="bd-btn"        data-bd="tm"      onclick="setBreakdown('tm',this)">По ТМ</button>
     </div>
-
     <div id="funnel-summary"></div>
     <div class="analytics"><div class="an-scroll" id="analytics-table">
       <div style="text-align:center;color:#aaa;padding:16px">Загрузка...</div>
     </div></div>
   </div>
-
   <!-- ═══ ВКЛАДКА: ДЕКОМПОЗИЦИЯ ═══ -->
   <div id="view-decomp" style="display:none">
     <div class="section-title">
       Декомпозиция ОП
       <span id="decomp-month-lbl" style="font-size:12px;font-weight:600;color:var(--ink-500)"></span>
     </div>
-
     <div class="breakdown-switch">
       <span class="bd-lbl">Раздел:</span>
       <button class="bd-btn active" id="ds-report" onclick="setDecompSub('report',this)">Декомпозиция</button>
       <button class="bd-btn"        id="ds-plans"  onclick="setDecompSub('plans',this)">Планы</button>
     </div>
-
     <!-- Планы -->
     <div id="decomp-plans" style="display:none">
       <div class="plans-head">
@@ -322,7 +293,6 @@ td.slot.current-lead-slot{background:var(--blue-100)}
         <table class="an-table rep-t" id="plans-table"></table>
       </div></div>
     </div>
-
     <!-- Декомпозиция -->
     <div id="decomp-report">
       <div class="analytics"><div class="an-scroll" id="decomp-table">
@@ -330,15 +300,12 @@ td.slot.current-lead-slot{background:var(--blue-100)}
       </div></div>
     </div>
   </div>
-
   <div class="debug-box" id="debug-box"></div>
 </div>
-
 <!-- Модалка -->
 <div class="modal-bg" id="modal-bg">
   <div class="modal">
     <h3 id="modal-title">Новая встреча</h3>
-
     <div class="field">
       <label>Статус ТМ квалификации лида в сделку</label>
       <select id="m-tmqual">
@@ -390,7 +357,6 @@ td.slot.current-lead-slot{background:var(--blue-100)}
     <div id="readonly-note" style="display:none;background:var(--blue-50);border-radius:9px;padding:8px 11px;font-size:12px;color:var(--ink-700);margin-top:4px">
       🔒 Эта встреча назначена на другого менеджера — доступен только просмотр.
     </div>
-
     <div class="modal-btns">
       <button class="btn-del" id="btn-del" style="display:none" onclick="deleteEntry()">Удалить</button>
       <button class="btn-cancel-m" onclick="closeModal()">Отмена</button>
@@ -398,7 +364,6 @@ td.slot.current-lead-slot{background:var(--blue-100)}
     </div>
   </div>
 </div>
-
 <script>
 // ════════════════════════════════════════════════
 //  КОНФИГ
@@ -420,7 +385,6 @@ const F = {
   journalDeal  : 'UF_CRM_6A4F3FFF6EC59',   // журнал в СДЕЛКАХ
   calId        : 'UF_CRM_SH_CALID',     // ID события календаря (чтобы не плодить дубли)
 };
-
 // Явные коды полей встречи в СДЕЛКАХ (боевые, заданы вручную).
 // В сделках много похожих тестовых полей ("Дата встречи №1/№2/№3"), поэтому
 // автоопределение по названию ненадёжно — задаём коды напрямую.
@@ -435,7 +399,6 @@ const DEAL_FIELDS_EXPLICIT = {
   journal : 'UF_CRM_6A4F3FFF6EC59',   // журнал статусов в сделке
   calId   : 'UF_CRM_1785738923',      // ID события календаря в сделке (аналог UF_CRM_SH_CALID)
 };
-
 // Пороги сегментов (буква → сравнение и сумма в рублях), по которым ищем
 // нужный отдел в Б24 — сопоставляем не по точному тексту названия (он может
 // чуть отличаться пробелами/пунктуацией), а по числу и знаку "более/менее"
@@ -447,7 +410,6 @@ const SEGMENT_THRESHOLDS = [
   { letters: ['D'],               cmp: '>', amount: 3000000  },
   { letters: ['E','F','G','H'],   cmp: '<', amount: 3000000  },
 ];
-
 // Достаём из названия отдела число (склеивая группы цифр) и знак сравнения.
 // "Лиды от ТМ (сегмент > 50 000 000 р.)" → {cmp:'>', amount:50000000}
 // "Лиды от ТМ (сегмент менее 3 000 000 р.)" → {cmp:'<', amount:3000000}
@@ -460,7 +422,6 @@ function parseDeptThreshold(name) {
   const cmp = /менее|<|до\s/i.test(n) ? '<' : '>';
   return { cmp, amount };
 }
-
 const STATUS_IDS = {
   assigned  : '5324',
   confirmed : '5325',
@@ -469,17 +430,14 @@ const STATUS_IDS = {
   cancel    : '5328',
   given_tm  : '5329',
 };
-
 // ════════════════════════════════════════════════
 //  ЖУРНАЛ СТАТУСОВ ВСТРЕЧИ
 // ════════════════════════════════════════════════
 // Журнал хранится в поле F.journal. Формат строки: "ISODATE ключ".
 // Поле может быть "много значений" (массив строк) или одна строка с \n.
 // Ключи: assigned | confirmed | moved | done | cancel | given_tm
-
 // Разрешённые ключи статусов в журнале.
 const JOURNAL_KEYS = ['assigned','confirmed','moved','done','cancel','given_tm'];
-
 // Парсим значение поля-журнала в массив ключей статусов по порядку.
 function parseJournal(raw) {
   let lines = [];
@@ -494,28 +452,23 @@ function parseJournal(raw) {
     })
     .filter(k => JOURNAL_KEYS.includes(k));
 }
-
 // Дописываем новую запись в журнал, если статус реально изменился.
 // Возвращаем новое значение поля (массив — под "много значений").
 function appendJournal(raw, newStatusKey) {
   let lines = [];
   if (Array.isArray(raw)) lines = raw.map(String).filter(Boolean);
   else if (raw) lines = String(raw).split(/\r?\n/).map(s => s.trim()).filter(Boolean);
-
   const keys = parseJournal(raw);
   const last = keys[keys.length - 1];
   // Не дублируем, если последний статус тот же (кроме assigned — повторное
   // назначение важно фиксировать для "назначили повторно").
   if (last === newStatusKey && newStatusKey !== 'assigned') return lines;
-
   const stamp = new Date().toISOString().slice(0, 16); // YYYY-MM-DDTHH:MM
   lines.push(stamp + ' ' + newStatusKey);
   return lines;
 }
-
 const SLOTS = ['9:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00','20:00','21:00'];
 const CSS   = {assigned:'s-assigned',confirmed:'s-confirmed',done:'s-done',moved:'s-moved',cancel:'s-cancel',own:'s-own',given_tm:'s-giventm'};
-
 // ════════════════════════════════════════════════
 //  СОСТОЯНИЕ
 // ════════════════════════════════════════════════
@@ -529,7 +482,6 @@ let managers       = [];
 let tms            = [];
 let userNameById   = {};   // ID пользователя → имя (для строк сетки по всем менеджерам)
 let editId         = null, modalMgr, modalSlot, modalDate;
-
 // ── Сегментация селлера ──
 let segmentFieldItems = [];   // [{id, letter, label}] — расшифровка списка UF_CRM_1730551844
 let leadSources = [];         // [{id, name}] — справочник источников лида (crm.status SOURCE)
@@ -542,7 +494,6 @@ let segmentDeptIds    = {};   // буква сегмента → ID отдела
 let segmentManagers   = {};   // буква сегмента → [{id,name}] менеджеры этого отдела
 let activeSegmentId   = '';   // текущий выбранный сегмент в тулбаре (фильтр по всей сетке)
 let tmqualItems       = [];   // [{id,label}] — значения поля "Статус ТМ квалификации" (UF_CRM_1721715916)
-
 // Контекст — из URL-параметров (передаётся при открытии из карточки лида/сделки)
 const URL_PARAMS  = new URLSearchParams(window.location.search);
 let currentLeadId = URL_PARAMS.get('lead_id') || null;
@@ -557,7 +508,6 @@ let currentUserIsAdmin = false; // админ видит/меняет всё
 let modalEntityId   = null;     // ID лида/сделки, открытого в модалке (для ссылки)
 let modalEntityType = 'lead';
 let currentDomain = URL_PARAMS.get('DOMAIN') || '';
-
 // Б24 передаёт PLACEMENT и PLACEMENT_OPTIONS через URL после нашего редиректа через Worker.
 // Парсим их и определяем лид/сделку — это работает даже когда BX24.js не отвечает.
 (function parsePlacementFromUrl() {
@@ -575,11 +525,9 @@ let currentDomain = URL_PARAMS.get('DOMAIN') || '';
     }
   } catch (e) { /* ignore */ }
 })();
-
 // ════════════════════════════════════════════════
 //  API — прямые вызовы вебхука Б24
 // ════════════════════════════════════════════════
-
 // Одиночный вызов (add/update/delete)
 async function apiOne(method, params = {}) {
   const r = await fetch(WEBHOOK + method, {
@@ -599,7 +547,6 @@ async function apiOne(method, params = {}) {
   if (!r.ok) throw new Error('HTTP ' + r.status);
   return d ? d.result : null;
 }
-
 // Одна страница "как есть" (с total/next), не бросает на ошибке фильтра
 async function apiPage(method, params = {}) {
   const r = await fetch(WEBHOOK + method, {
@@ -609,7 +556,6 @@ async function apiPage(method, params = {}) {
   });
   return r.json();
 }
-
 // Вызов с параллельной пагинацией (list-методы)
 async function apiAll(method, params = {}) {
   // Первая страница — узнаём total
@@ -621,15 +567,12 @@ async function apiAll(method, params = {}) {
   if (!r0.ok) throw new Error('HTTP ' + r0.status);
   const d0 = await r0.json();
   if (d0.error) throw new Error(d0.error_description || d0.error);
-
   const all = Array.isArray(d0.result) ? [...d0.result] : [];
   const total = d0.total || 0;
   if (!d0.next || all.length >= total) return all;
-
   // Оставшиеся страницы — параллельно, но не более 3 одновременно
   const starts = [];
   for (let s = d0.next; s < total; s += 50) starts.push(s);
-
   for (let i = 0; i < starts.length; i += 5) {
     const batch = starts.slice(i, i + 5);
     const pages = await Promise.all(batch.map(start =>
@@ -643,10 +586,8 @@ async function apiAll(method, params = {}) {
       if (Array.isArray(page.result)) all.push(...page.result);
     }
   }
-
   return all;
 }
-
 // ════════════════════════════════════════════════
 //  ПРОСТОЙ КЭШ (localStorage)
 // ════════════════════════════════════════════════
@@ -662,7 +603,6 @@ function cacheGet(key, ttlMs) {
 function cacheSet(key, data) {
   try { localStorage.setItem(key, JSON.stringify({ t: Date.now(), data })); } catch (e) {}
 }
-
 // ════════════════════════════════════════════════
 //  ПОЛЬЗОВАТЕЛИ
 // ════════════════════════════════════════════════
@@ -671,7 +611,6 @@ const EXTRA_MANAGERS = [{ id: '5', name: 'Валерия Кирпичников�
 function addExtraManagers() {
   EXTRA_MANAGERS.forEach(x => { if (!managers.find(m => m.id === x.id)) managers.push(x); });
 }
-
 async function loadUsers(force = false) {
   try {
     const cached = !force && cacheGet('sh_users', 60 * 60 * 1000);
@@ -693,14 +632,12 @@ async function loadUsers(force = false) {
       apiAll('user.get', { filter: { ACTIVE: true, UF_DEPARTMENT: 17  }, select: ['ID','NAME','LAST_NAME'] }),
       apiAll('user.get', { filter: { ACTIVE: true, UF_DEPARTMENT: 148 }, select: ['ID','NAME','LAST_NAME'] }),
     ]);
-
     const toUser = u => ({ id: String(u.ID), name: (u.NAME + ' ' + u.LAST_NAME).trim() });
     managers = listOP.map(toUser);
     tms      = listTM.map(toUser);
     addExtraManagers();
     cacheSet('sh_users', { managers, tms });
     log('👥 Менеджеры: ' + managers.length + '  📞 ТМ: ' + tms.length);
-
     const sel = document.getElementById('mgr-filter');
     if (sel) {
       const cur = sel.value;
@@ -712,11 +649,9 @@ async function loadUsers(force = false) {
     managers = []; tms = [];
   }
 }
-
 // ════════════════════════════════════════════════
 //  СЕГМЕНТАЦИЯ СЕЛЛЕРА (UF_CRM_1730551844)
 // ════════════════════════════════════════════════
-
 // Буква сегмента в списке Б24 может быть набрана КИРИЛЛИЦЕЙ (А, В, С, Е, Н...),
 // а SEGMENT_THRESHOLDS/segmentDeptIds используют ЛАТИНИЦУ (A, B, C, E, H...).
 // Внешне буквы неотличимы, но это разные символы — из-за этого фильтр по
@@ -730,7 +665,6 @@ function normalizeSegLetter(ch) {
   };
   return cyr2lat[up] || up;
 }
-
 // Расшифровываем список значений поля (crm.lead.fields):
 //  - сегментацию UF_CRM_1730551844 (буква A/C/D/...),
 //  - статус встречи UF_CRM_SH_MSTATUS (Назначена/Подтверждена/Проведена/Перенесена/Отдано в ТМ),
@@ -738,17 +672,14 @@ function normalizeSegLetter(ch) {
 async function loadSegmentField(force = false) {
   try {
     const fields = await apiOne('crm.lead.fields', {});
-
     // ── Статус встречи ──
     resolveStatusIds(fields);
-
     // ── Статус ТМ квалификации лида (UF_CRM_1721715916) ──
     const tqDef = fields && fields[F.tmqual];
     tmqualItems = (tqDef && Array.isArray(tqDef.items))
       ? tqDef.items.map(it => ({ id: String(it.ID), label: String(it.VALUE || '') }))
       : [];
     if (tmqualItems.length) log('🏷️ Статусы ТМ квалификации: ' + tmqualItems.length + ' значений');
-
     // ── Сегментация ──
     const fieldDef = fields && fields[F.segment];
     if (!fieldDef || !Array.isArray(fieldDef.items)) {
@@ -757,7 +688,6 @@ async function loadSegmentField(force = false) {
       segmentFieldItems = []; segmentIdToLetter = {};
       return;
     }
-
     segmentFieldItems = fieldDef.items.map(it => {
       const value = String(it.VALUE || '');
       const m = value.match(/^\s*([A-Za-zА-Яа-я])\s*[-—]/); // "A - 50 млн..." → "A"
@@ -766,10 +696,8 @@ async function loadSegmentField(force = false) {
     });
     segmentIdToLetter = {};
     segmentFieldItems.forEach(it => { if (it.letter) segmentIdToLetter[it.id] = it.letter; });
-
     log('🏷️ Сегменты найдены: ' + segmentFieldItems.map(i => `${i.letter || '?'}(id${i.id})`).join(', '));
     fillSegmentFilterSelect();
-
     const unmatched = segmentFieldItems.filter(i => !i.letter);
     if (unmatched.length) {
       log('⚠️ Не удалось распознать букву сегмента в: ' + unmatched.map(i => i.label).join(' | ') +
@@ -780,7 +708,6 @@ async function loadSegmentField(force = false) {
     segmentFieldItems = []; segmentIdToLetter = {};
   }
 }
-
 // Сопоставляем ключи статусов с реальными ID значений списка UF_CRM_SH_MSTATUS
 // по тексту. Так статус сохраняется корректно даже если захардкоженные ID
 // устарели/не совпадают с порталом.
@@ -820,20 +747,17 @@ function resolveStatusIds(fields) {
     log('⚠️ resolveStatusIds: ' + e.message);
   }
 }
-
 // Находим ID отделов по названию (department.get) и грузим их сотрудников.
 async function loadSegmentDepartments(force = false) {
   try {
     const allDepts = await apiAll('department.get', {});
     log('🏢 Всего отделов в Б24: ' + allDepts.length);
-
     // Разбираем все отделы вида "Лиды от ТМ (сегмент ...)" и вытаскиваем порог
     const candidates = allDepts
       .map(d => ({ id: String(d.ID), name: String(d.NAME || ''), th: parseDeptThreshold(d.NAME) }))
       .filter(d => d.th);
     log('🏢 Отделов "Лиды от ТМ (сегмент ...)" найдено: ' + candidates.length +
         (candidates.length ? ' — ' + candidates.map(c => c.name + ' [' + c.th.cmp + c.th.amount + ']').join(' | ') : ''));
-
     segmentDeptIds = {};
     SEGMENT_THRESHOLDS.forEach(({ letters, cmp, amount }) => {
       const dep = candidates.find(c => c.th.cmp === cmp && c.th.amount === amount);
@@ -844,16 +768,13 @@ async function loadSegmentDepartments(force = false) {
         log('⚠️ Не найден отдел под порог ' + cmp + amount + ' (буквы: ' + letters.join(',') + ').');
       }
     });
-
     // Забираем ВСЕХ активных пользователей один раз и раскладываем по отделам на клиенте.
     const allUsers = await apiAll('user.get', { filter: { ACTIVE: true }, select: ['ID','NAME','LAST_NAME','UF_DEPARTMENT'] });
     log('👥 Всего активных пользователей: ' + allUsers.length);
     allUsers.forEach(u => { userNameById[String(u.ID)] = ((u.NAME || '') + ' ' + (u.LAST_NAME || '')).trim() || ('ID ' + u.ID); });
-
     const uniqueDeptIds = [...new Set(Object.values(segmentDeptIds))];
     const usersByDept = {};
     uniqueDeptIds.forEach(deptId => { usersByDept[deptId] = []; });
-
     allUsers.forEach(u => {
       let deps = u.UF_DEPARTMENT;
       if (!Array.isArray(deps)) deps = deps != null ? [deps] : [];
@@ -864,25 +785,21 @@ async function loadSegmentDepartments(force = false) {
         }
       });
     });
-
     segmentManagers = {};
     Object.keys(segmentDeptIds).forEach(letter => {
       segmentManagers[letter] = usersByDept[segmentDeptIds[letter]] || [];
     });
-
     uniqueDeptIds.forEach(deptId => {
       const list = usersByDept[deptId] || [];
       log('🏢 Отдел id=' + deptId + ': ' + list.length + ' чел.' +
           (list.length ? ' — ' + list.map(m => m.name).join(', ') : ' (ПУСТО — проверьте состав отдела в Б24)'));
     });
-
     log('🏢 Итог по сегментам: ' + Object.keys(segmentDeptIds).map(k => k + '=' + segmentDeptIds[k] + ' (' + (segmentManagers[k]||[]).length + ' чел.)').join(', '));
   } catch (e) {
     log('⚠️ loadSegmentDepartments: ' + e.message);
     segmentDeptIds = {}; segmentManagers = {};
   }
 }
-
 // Справочник источников лида (crm.status, ENTITY_ID = SOURCE).
 // SOURCE_ID лида → человекочитаемое название (Сайт, Звонок, Авито…).
 async function loadLeadSources(force = false) {
@@ -905,7 +822,6 @@ async function loadLeadSources(force = false) {
     leadSources = []; leadSourceName = {};
   }
 }
-
 // Автоопределение кодов полей встречи в СДЕЛКАХ.
 // Логика: берём названия наших полей из crm.lead.fields, затем в crm.deal.fields
 // ищем поля с такими же названиями и сохраняем их коды сделки. Журнал сделки
@@ -917,7 +833,6 @@ async function loadDealFields(force = false) {
       apiOne('crm.lead.fields', {}),
       apiOne('crm.deal.fields', {}),
     ]);
-
     // Название → код в сделках
     const dealTitleToCode = {};
     Object.keys(dealF || {}).forEach(code => {
@@ -926,7 +841,6 @@ async function loadDealFields(force = false) {
     });
     const leadTitle = code => ((leadF[code] && leadF[code].title) || '').trim().toLowerCase();
     const dealHasCode = code => !!(dealF && dealF[code]);
-
     // Для каждого нужного поля: 1) если ТОТ ЖЕ код есть в сделках — берём его;
     //                          2) иначе ищем поле сделки с тем же названием.
     const wanted = { date:F.date, status:F.status, manager:F.manager, tm:F.tm, segment:F.segment, tmqual:F.tmqual, calId:F.calId };
@@ -942,7 +856,6 @@ async function loadDealFields(force = false) {
       const lt = leadTitle(leadCode);
       if (lt && dealTitleToCode[lt]) { DF[key] = dealTitleToCode[lt]; return; }
     });
-
     cacheSet('sh_deal_fields_v6', DF);
     const found = Object.keys(DF).filter(k => DF[k]);
     log('🧩 Поля сделки определены: ' + found.map(k => k + '=' + DF[k]).join(', '));
@@ -952,7 +865,6 @@ async function loadDealFields(force = false) {
           miss.map(k => k + '="' + leadTitle(wanted[k]) + '"').join(', ') +
           '. Проверьте, что в сделках есть поля с такими названиями.');
     }
-
     // ── Карты перевода значений списков лид↔сделка (ID разные, текст одинаковый) ──
     // Сегмент: лидовый ID → сделочный ID и обратно (сопоставляем по букве/тексту).
     buildEnumMap('segment', leadF[F.segment], dealF[DF.segment]);
@@ -963,11 +875,9 @@ async function loadDealFields(force = false) {
     DF = null;
   }
 }
-
 // Карты перевода ID значений списков между лидом и сделкой (по тексту).
 const enumL2D = { segment:{}, status:{} };  // лидовый ID → сделочный ID
 const enumD2L = { segment:{}, status:{} };  // сделочный ID → лидовый ID
-
 function normEnumText(v) {
   // Нормализуем текст значения: убираем кавычки, лишние пробелы, регистр,
   // приводим кириллические буквы сегмента к латинице.
@@ -976,7 +886,6 @@ function normEnumText(v) {
   if (m) { const lat = normalizeSegLetter(m[1]); s = lat.toLowerCase() + s.slice(1); }
   return s;
 }
-
 function buildEnumMap(kind, leadDef, dealDef) {
   enumL2D[kind] = {}; enumD2L[kind] = {};
   const li = (leadDef && leadDef.items) || [];
@@ -995,7 +904,6 @@ function buildEnumMap(kind, leadDef, dealDef) {
   });
   log('🔁 Карта ' + kind + ' лид↔сделка: сопоставлено ' + matched + ' из ' + li.length);
 }
-
 // Список менеджеров для выбранного значения сегмента (по ID значения поля).
 function managersForSegmentValue(segId) {
   if (!segId) return null;
@@ -1009,7 +917,6 @@ function managersForSegmentValue(segId) {
   }
   return list;
 }
-
 function fillSegmentFilterSelect() {
   const sel = document.getElementById('segment-filter');
   if (!sel) return;
@@ -1017,7 +924,6 @@ function fillSegmentFilterSelect() {
   sel.innerHTML = '<option value="">Все сегменты</option>' +
     segmentFieldItems.map(i => `<option value="${i.id}"${i.id===cur?' selected':''}>${i.label}</option>`).join('');
 }
-
 // Тулбарный фильтр сегмента — ограничивает сетку менеджерами нужного отдела.
 function onSegmentFilterChange() {
   activeSegmentId = document.getElementById('segment-filter').value;
@@ -1025,7 +931,6 @@ function onSegmentFilterChange() {
   renderAnalytics();
   if (currentView === 'decomp') renderDecomp();
 }
-
 // ════════════════════════════════════════════════
 //  ЛИДЫ → ВСТРЕЧИ
 // ════════════════════════════════════════════════
@@ -1034,36 +939,29 @@ async function loadEntries(from, to, force = false) {
     const SELECT = ['ID','TITLE','STATUS_ID','SOURCE_ID','ASSIGNED_BY_ID','CREATED_BY_ID', F.manager, F.date, F.status, F.tm, F.tmqual, F.segment, F.journal, F.calId];
     const ORDER  = { [F.date]: 'ASC' };
     const cacheKey = 'sh_leads_' + from + '_' + to;
-
     let items = !force && cacheGet(cacheKey, 90 * 1000);
     if (items) {
       log('📅 За период: ' + items.length + ' (кэш)');
       return items.map(item => mapLead(item));
     }
-
     const t0 = performance.now();
     const fromISO = from + 'T00:00:00';
     const toISO   = to   + 'T23:59:59';
     const rangeFilter = { ['>=' + F.date]: fromISO, ['<=' + F.date]: toISO };
-
     // Серверная фильтрация по диапазону дат — единственный путь.
     const d0 = await apiPage('crm.lead.list', { filter: rangeFilter, select: SELECT, order: ORDER, start: 0 });
-
     if (d0.error) {
       log('❌ Ошибка фильтра по дате: ' + (d0.error_description || d0.error));
       setStatus('Ошибка фильтра: ' + (d0.error_description || d0.error), 'error');
       return [];
     }
-
     items = Array.isArray(d0.result) ? [...d0.result] : [];
     const total = d0.total || 0;
-
     if (total === 0) {
       log('📅 За период встреч нет (0 лидов)');
       cacheSet(cacheKey, []);
       return [];
     }
-
     // 🛑 СТОП-КРАН: если Б24 вернул больше 200 лидов на одну дату/период —
     // серверный фильтр по UF-полю не работает (вернул всю базу).
     const HARD_LIMIT = 200;
@@ -1083,7 +981,6 @@ async function loadEntries(from, to, force = false) {
       }
     }
     log('✅ Загружено: ' + items.length + '/' + total + ' за ' + Math.round(performance.now() - t0) + 'мс');
-
     // Подстраховка — фильтрация по периоду на клиенте
     const filtered = items.filter(item => {
       const d = (item[F.date] || '').slice(0, 10);
@@ -1092,7 +989,6 @@ async function loadEntries(from, to, force = false) {
     cacheSet(cacheKey, filtered);
     log('📅 За период (лиды): ' + filtered.length + ' (' + Math.round(performance.now() - t0) + 'мс)');
     const leadEntries = filtered.map(item => mapLead(item));
-
     // ── Догружаем СДЕЛКИ-встречи за тот же период и дедуплицируем ──
     let dealEntries = [];
     try {
@@ -1100,7 +996,6 @@ async function loadEntries(from, to, force = false) {
     } catch (e) {
       log('⚠️ Сделки не загружены: ' + e.message);
     }
-
     // ── Дедупликация лид/сделка ──
     // Сконвертированный лид (STATUS_ID=CONVERTED) не показываем в сетке:
     // его встреча живёт в сделке. Это работает даже если сделка не загрузилась.
@@ -1121,7 +1016,6 @@ async function loadEntries(from, to, force = false) {
     return [];
   }
 }
-
 // Загрузка СДЕЛОК-встреч за период (по дате встречи в поле сделки DF.date).
 // Возвращает массив mapped-встреч с entity='deal'. Требует, чтобы DF.date был найден.
 async function loadDealEntries(from, to) {
@@ -1129,17 +1023,14 @@ async function loadDealEntries(from, to) {
   const cacheKey = 'sh_deals_' + from + '_' + to;
   const cached = cacheGet(cacheKey, 90 * 1000);
   if (cached) { log('📅 Сделки за период: ' + cached.length + ' (кэш)'); return cached.map(mapDeal).filter(Boolean); }
-
   const SELECT = ['ID','TITLE','STATUS_ID','SOURCE_ID','ASSIGNED_BY_ID','CREATED_BY_ID','LEAD_ID',
                   DF.date, DF.status, DF.manager, DF.tm, DF.segment, DF.tmqual, DF.journal, DF.calId].filter(Boolean);
   const rangeFilter = { ['>=' + DF.date]: from + 'T00:00:00', ['<=' + DF.date]: to + 'T23:59:59' };
   const ORDER = { [DF.date]: 'ASC' };
-
   const d0 = await apiPage('crm.deal.list', { filter: rangeFilter, select: SELECT, order: ORDER, start: 0 });
   if (d0.error) { log('⚠️ crm.deal.list: ' + (d0.error_description || d0.error)); return []; }
   let items = Array.isArray(d0.result) ? [...d0.result] : [];
   const total = d0.total || 0;
-
   if (total > 200) {
     log('🛑 Сделок ' + total + ' — фильтр по UF-дате не сработал, беру первые ' + items.length + '.');
   } else if (d0.next && items.length < total) {
@@ -1157,14 +1048,12 @@ async function loadDealEntries(from, to) {
   log('📅 Сделки за период: ' + filtered.length);
   return filtered.map(mapDeal).filter(Boolean);
 }
-
 function mapLead(item) {
   const dt   = item[F.date] || '';
   const date = dt.slice(0, 10);
   const hh   = parseInt(dt.slice(11, 13));
   const slot = (isNaN(hh) ? 9 : hh) + ':00';        // час-корзина для сетки
   const time = dt.length >= 16 ? dt.slice(11, 16) : slot;  // точное время HH:MM (с минутами)
-
   // Текущий статус берём ИЗ ЖУРНАЛА (F.journal) — это надёжный источник,
   // т.к. поле статуса F.status в лидах может отсутствовать/не записываться.
   // Последняя запись журнала = текущий статус. Фолбэк — поле статуса и STATUS_ID.
@@ -1186,7 +1075,6 @@ function mapLead(item) {
     else if (item.STATUS_ID === 'WON')                                 statusKey = 'done';
     else if (item.STATUS_ID === 'JUNK')                                statusKey = 'cancel';
   }
-
   // ── Авто-отмена по логам/времени ──
   // Если встреча в прошлом и всё ещё "Назначена" (не подтверждена, статус не менялся) —
   // считаем её отменённой автоматически. Подтверждённые/перенесённые/проведённые не трогаем.
@@ -1195,7 +1083,6 @@ function mapLead(item) {
     const t = new Date(dt).getTime();
     if (!isNaN(t) && t < Date.now()) { statusKey = 'cancel'; autoCancel = true; }
   }
-
   const hasTM   = !!(item[F.tm]);
   const source  = hasTM ? 'tm' : 'own';
   // UF_CRM_1781713296 может вернуться массивом или строкой/числом. Нормализуем к строковому ID.
@@ -1203,7 +1090,6 @@ function mapLead(item) {
   if (Array.isArray(rawMgr)) rawMgr = rawMgr[0];
   const mgrFromField = rawMgr ? String(rawMgr) : '';
   const mgrId   = mgrFromField || String(item.ASSIGNED_BY_ID || '');
-
   return {
     id: String(item.ID), mgr: mgrId,
     date, slot, time, autoCancel, source,
@@ -1222,7 +1108,6 @@ function mapLead(item) {
                : (item[F.tmqual] ? [String(item[F.tmqual])] : []),   // статус ТМ квалификации
   };
 }
-
 // Маппер СДЕЛКИ. Переименовываем deal-поля в лидовые коды по карте DF и
 // переиспользуем mapLead (вся логика статусов/журнала общая). Помечаем entity='deal'.
 function mapDeal(item) {
@@ -1240,13 +1125,11 @@ function mapDeal(item) {
   if (DF.tmqual)  shim[F.tmqual]  = item[DF.tmqual];
   if (DF.journal) shim[F.journal] = item[DF.journal];
   if (DF.calId)   shim[F.calId]   = item[DF.calId];
-
   const mapped = mapLead(shim);
   mapped.entity = 'deal';
   mapped.leadId = String(item.LEAD_ID || '');  // из какого лида создана (для дедупликации)
   return mapped;
 }
-
 // ════════════════════════════════════════════════
 //  КАЛЕНДАРЬ МЕНЕДЖЕРА
 // ════════════════════════════════════════════════
@@ -1259,7 +1142,6 @@ function fmtActDT(d) {
   const p = n => String(n).padStart(2, '0');
   return d.getFullYear() + '-' + p(d.getMonth()+1) + '-' + p(d.getDate()) + 'T' + p(d.getHours()) + ':' + p(d.getMinutes()) + ':00';
 }
-
 // Запасной вариант, когда у вебхука нет права «Календарь»:
 // создаём/обновляем CRM-дело «Встреча», привязанное к лиду. Требует только право crm.
 // Отображается у менеджера в планировщике и в таймлайне лида.
@@ -1290,7 +1172,6 @@ async function syncActivity(leadId, mgrId, start, title, existingCalId) {
   log('🗓️ Дело «Встреча» создано (#' + newId + ') у менеджера ' + mgrId);
   return 'act:' + newId;
 }
-
 // Создаём/обновляем встречу у менеджера.
 // Сначала пробуем настоящий календарь (право «Календарь»), при отсутствии прав —
 // запасной вариант через CRM-дело «Встреча» (право crm, есть всегда).
@@ -1298,7 +1179,6 @@ async function syncCalendar(leadId, mgrId, dtVal, title, existingCalId, isDeal) 
   if (!mgrId || !dtVal) return existingCalId || '';
   const start = new Date(dtVal);
   if (isNaN(start)) return existingCalId || '';
-
   // Куда писать обратно ID события календаря: в сделку или в лид.
   const writeCalId = async (evId) => {
     try {
@@ -1309,12 +1189,10 @@ async function syncCalendar(leadId, mgrId, dtVal, title, existingCalId, isDeal) 
       }
     } catch (e) { /* поле calId может отсутствовать в сделке — не критично */ }
   };
-
   if (existingCalId && String(existingCalId).indexOf('act:') === 0) {
     try { return await syncActivity(leadId, mgrId, start, title, existingCalId); }
     catch (e) { log('⚠️ Не удалось обновить дело «Встреча»: ' + e.message); return existingCalId; }
   }
-
   const params = {
     type: 'user', ownerId: parseInt(mgrId),
     name: title || 'Встреча',
@@ -1337,7 +1215,6 @@ async function syncCalendar(leadId, mgrId, dtVal, title, existingCalId, isDeal) 
         exists = !!(evObj && evObj.ID);
         if (evObj) log('🔎 Событие #' + existingCalId + ': владелец OWNER_ID=' + (evObj.OWNER_ID||evObj.CAL_TYPE) + ', ожидался менеджер ' + mgrId);
       } catch (e) { exists = false; }
-
       if (exists) {
         await apiOne('calendar.event.update', { id: parseInt(existingCalId), ...params });
         log('📅 Событие календаря обновлено (#' + existingCalId + ') у менеджера ' + mgrId);
@@ -1360,7 +1237,6 @@ async function syncCalendar(leadId, mgrId, dtVal, title, existingCalId, isDeal) 
     return existingCalId || '';
   }
 }
-
 // ════════════════════════════════════════════════
 //  СОХРАНЕНИЕ
 // ════════════════════════════════════════════════
@@ -1387,28 +1263,26 @@ async function saveEntry() {
     const skey    = document.getElementById('m-status').value;
     const tmqualVal = document.getElementById('m-tmqual').value;
     const segVal  = document.getElementById('m-segment').value;
-
     // Без сегментации селлера встречу назначить нельзя.
     if (!segVal) {
       alert('Укажите сегментацию селлера — без сегмента встречу назначить нельзя.');
       btn.disabled = false; btn.textContent = 'Сохранить';
       return;
     }
-
     // Поле статуса — одиночное (enumeration), пишем один ID значения.
     const statusId = STATUS_IDS[skey] || '';
-
     const fields = {
       TITLE          : client || (source === 'own' ? 'Своя встреча' : 'Встреча от ТМ'),
       [F.manager]    : parseInt(mgrId) || null,   // менеджер из шахматки → в отдельное поле
       [F.date]       : dtVal ? dtVal + ':00' : '',
-      [F.tm]         : source === 'tm' ? (parseInt(tmId) || null) : null,
+      // ПРАВКА №1: чтобы источник можно было сменить с «ТМ» на «Своя», поле ТМ
+      // очищаем ПУСТОЙ СТРОКОЙ (Битрикс игнорирует null и не сбрасывает поле).
+      [F.tm]         : source === 'tm' ? (parseInt(tmId) || '') : '',
       [F.status]     : statusId,
       [F.tmqual]     : tmqualVal ? [tmqualVal] : [],
       [F.segment]    : segVal || null,
     };
     // ВАЖНО: ASSIGNED_BY_ID (ответственный лида) намеренно НЕ включаем — он остаётся прежним.
-
     // ── Определяем ЦЕЛЕВУЮ СУЩНОСТЬ (куда писать: лид или сделка) ──
     let saveToDeal = false, dealTargetId = null;
     // Приоритет: если шахматка открыта ИЗ КАРТОЧКИ СДЕЛКИ — пишем в эту сделку.
@@ -1426,13 +1300,11 @@ async function saveEntry() {
     } else {
       log('🎯 Цель сохранения: ЛИД (currentLeadId=' + currentLeadId + ', editId=' + editId + ')');
     }
-
     if (saveToDeal && (!DF || !DF.date)) {
       alert('Не определены поля встречи в сделках — сохранение в сделку невозможно. Обновите страницу.');
       btn.disabled = false; btn.textContent = 'Сохранить';
       return;
     }
-
     // ── Журнал статусов: дописываем текущий статус в историю встречи ──
     try {
       const targetId = editId || (saveToDeal ? dealTargetId : currentLeadId);
@@ -1452,7 +1324,6 @@ async function saveEntry() {
     } catch (e) {
       log('⚠️ Журнал статусов: ' + e.message);
     }
-
     let savedLeadId = null;
     if (saveToDeal) {
       // Пишем в СДЕЛКУ: переводим поля из лидовых кодов в коды сделки (DF).
@@ -1488,7 +1359,6 @@ async function saveEntry() {
       const newId = await apiOne('crm.lead.add', { fields });
       savedLeadId = newId;
     }
-
     // ── Событие в календарь выбранного менеджера ──
     try {
       const exEntry = allEntries.find(x => x.id === String(savedLeadId));
@@ -1496,9 +1366,7 @@ async function saveEntry() {
       if (dtVal) await syncCalendar(savedLeadId, mgrId, dtVal + ':00',
         (client || (source === 'own' ? 'Своя встреча' : 'Встреча от ТМ')), existingCalId, saveToDeal);
     } catch (e) { log('⚠️ syncCalendar: ' + e.message); }
-
     closeModal();
-
     // Обновляем встречи текущего периода
     try {
       const dates = getDates();
@@ -1508,7 +1376,6 @@ async function saveEntry() {
     } catch (e) {
       log('⚠️ Не удалось обновить период после сохранения: ' + e.message);
     }
-
     // Гарантированно подтягиваем только что сохранённую встречу и добавляем в сетку.
     // ВАЖНО: читаем из ТОЙ ЖЕ сущности, куда сохраняли (сделка или лид),
     // иначе crm.lead.get с ID сделки даёт HTTP 400.
@@ -1535,7 +1402,6 @@ async function saveEntry() {
             if (dpick) dpick.value = mapped.date;
             log('📅 Переключаю шахматку на дату встречи: ' + mapped.date);
           }
-
           if (mapped.mgr && !managers.find(m => m.id === mapped.mgr)) {
             try {
               const u = await apiOne('user.get', { ID: parseInt(mapped.mgr) });
@@ -1546,7 +1412,6 @@ async function saveEntry() {
               managers.push({ id: mapped.mgr, name: 'Пользователь #' + mapped.mgr });
             }
           }
-
           allEntries = allEntries.filter(e => e.id !== String(savedLeadId));
           allEntries.push(mapped);
           renderGrid();
@@ -1564,7 +1429,6 @@ async function saveEntry() {
     btn.disabled = false; btn.textContent = 'Сохранить';
   }
 }
-
 async function deleteEntry() {
   const existing = allEntries.find(x => x.id === editId);
   if (existing && !canEditEntry(existing)) {
@@ -1574,7 +1438,6 @@ async function deleteEntry() {
   if (!confirm('Удалить встречу? Сам лид/сделка останется, очистятся только данные встречи.')) return;
   try {
     const isDeal = existing && existing.entity === 'deal';
-
     // Очищаем ПОЛЯ ВСТРЕЧИ (дату, статус, менеджера, ТМ, журнал), а лид/сделку НЕ удаляем.
     if (isDeal) {
       if (!DF || !DF.date) { alert('Не определены поля встречи в сделке — удаление невозможно.'); return; }
@@ -1596,7 +1459,6 @@ async function deleteEntry() {
       await apiOne('crm.lead.update', { id: parseInt(editId), fields: clear });
       log('🗑️ Встреча очищена в ЛИДЕ #' + editId + ' (лид сохранён)');
     }
-
     // Убираем событие из календаря, если было
     try {
       if (existing && existing.calId) {
@@ -1604,14 +1466,12 @@ async function deleteEntry() {
         log('🗑️ Событие календаря #' + existing.calId + ' удалено');
       }
     } catch (e) { log('⚠️ Удаление события календаря: ' + e.message); }
-
     // Убираем из сетки локально
     allEntries = allEntries.filter(e => e.id !== editId);
     closeModal();
     renderGrid(); renderAnalytics();
   } catch (e) { alert('Ошибка: ' + e.message); }
 }
-
 // ════════════════════════════════════════════════
 //  РЕНДЕР СЕТКИ
 // ════════════════════════════════════════════════
@@ -1619,22 +1479,18 @@ function dateKey(d)    { const y=d.getFullYear(), m=String(d.getMonth()+1).padSt
 function addDays(d, n) { const r = new Date(d); r.setDate(r.getDate() + n); return r; }
 function fmtDay(d)     { return ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'][d.getDay()]; }
 function fmtDate(d)    { return d.toLocaleDateString('ru-RU', {day:'2-digit',month:'2-digit'}); }
-
 function getDates() {
   if (period === 'day') return [new Date(currentDate)];
-
   if (period === 'week') {
     const s = new Date(currentDate), dow = s.getDay();
     s.setDate(s.getDate() + (dow === 0 ? -6 : 1 - dow));
     return Array.from({length:5}, (_,i) => addDays(s, i));
   }
-
   if (period === 'month') {
     const y = currentDate.getFullYear(), m = currentDate.getMonth();
     const days = new Date(y, m+1, 0).getDate();
     return Array.from({length:days}, (_,i) => new Date(y, m, i+1));
   }
-
   if (period === 'quarter') {
     const y = currentDate.getFullYear();
     const q = Math.floor(currentDate.getMonth() / 3);
@@ -1643,26 +1499,21 @@ function getDates() {
     for (let d = new Date(start); d <= end; d.setDate(d.getDate()+1)) days.push(new Date(d));
     return days;
   }
-
   if (period === 'range' && dateFrom && dateTo) {
     const days = [];
     for (let d = new Date(dateFrom); d <= new Date(dateTo); d.setDate(d.getDate()+1)) days.push(new Date(d));
     return days;
   }
-
   return [new Date(currentDate)];
 }
-
 function uname(id, list) {
   const u = list.find(m => m.id === String(id));
   return u ? u.name : (id ? 'ID ' + id : '—');
 }
-
 // Список менеджеров с учётом фильтра "мгр-фильтр" + фильтра по сегменту (тулбар).
 function getFilteredManagers() {
   const sel    = document.getElementById('mgr-filter');
   const mgrVal = sel ? sel.value : '';
-
   let baseList;
   if (activeSegmentId) {
     const segList = managersForSegmentValue(activeSegmentId);
@@ -1677,11 +1528,9 @@ function getFilteredManagers() {
   } else {
     baseList = managers;
   }
-
   if (mgrVal) return baseList.filter(m => m.id === mgrVal);
   return baseList;
 }
-
 function fitBX24Window() {
   try {
     if (typeof BX24 === 'undefined') return;
@@ -1695,20 +1544,17 @@ function fitBX24Window() {
     else if (typeof BX24.fitWindow === 'function') BX24.fitWindow();
   } catch (e) { /* silent — БX24 ещё не готов */ }
 }
-
 function renderGrid() {
   const dates = getDates();
   document.getElementById('grid-loader').style.display = 'none';
   const tbl  = document.getElementById('grid');
   const wrap = document.querySelector('.grid-wrap');
-
   if (dates.length > 7) {
     wrap.style.display = 'none';
     return;
   }
   wrap.style.display = '';
   tbl.style.display = '';
-
   // Менеджеры с учётом фильтра по менеджеру и по сегменту
   const mgrList = getFilteredManagers().slice();
   // Показываем ВСЕ встречи: если фильтры не заданы — добавляем строки для менеджеров,
@@ -1727,7 +1573,6 @@ function renderGrid() {
   }
   // Тест-менеджеры показываем всегда (независимо от фильтров).
   EXTRA_MANAGERS.forEach(x => { if (!mgrList.find(m => m.id === x.id)) mgrList.push(x); });
-
   let html = '<thead><tr><th class="mgr-h">Менеджер ОП</th>';
   if (period === 'day') {
     SLOTS.forEach(s => html += `<th>${s}</th>`);
@@ -1737,7 +1582,6 @@ function renderGrid() {
     ));
   }
   html += '</tr></thead><tbody>';
-
   mgrList.forEach(mgr => {
     html += `<tr><td class="mgr-cell">${mgr.name}</td>`;
     const dsArr = period === 'day' ? [dateKey(dates[0])] : dates.map(dateKey);
@@ -1749,7 +1593,12 @@ function renderGrid() {
         if (!e) {
           html += `<td class="slot empty" onclick="openModal(null,'${mgr.id}','${sl}','${ds}')"></td>`;
         } else {
-          const css  = e.autoCancel ? 's-cancel' : (CSS[e.source === 'own' ? 'own' : e.status] || 's-assigned');
+          // ПРАВКА №3: цвет ячейки в шахматке следует за СТАТУСОМ встречи.
+          // Синий цвет "Своя" (s-own) показываем только для статуса "Назначена";
+          // при смене статуса (Проведена/Отмена/Перенесена/…) цвет меняется по статусу.
+          const css  = e.autoCancel ? 's-cancel'
+                     : (e.status === 'assigned' && e.source === 'own') ? 's-own'
+                     : (CSS[e.status] || 's-assigned');
           const tmName = e.source === 'tm' ? uname(e.tm, tms) : '';
           const auto = e.autoCancel ? ' ⚠ авто-отмена (не подтверждена, время прошло)' : '';
           const lbl  = (e.time ? e.time + ' ' : '') + (e.client || tmName || e.status);
@@ -1761,22 +1610,18 @@ function renderGrid() {
     });
     html += '</tr>';
   });
-
   tbl.innerHTML = html + '</tbody>';
 }
-
 // ════════════════════════════════════════════════
 //  АНАЛИТИКА (транспонированный отчёт)
 // ════════════════════════════════════════════════
 let reportBreakdown = 'mgr'; // 'mgr' | 'segment' | 'source'
-
 function setBreakdown(bd, el) {
   reportBreakdown = bd;
   document.querySelectorAll('.bd-btn').forEach(b => b.classList.remove('active'));
   if (el) el.classList.add('active');
   renderAnalytics();
 }
-
 // Возвращает [{key, name, filter(entry)}] — группы в зависимости от разреза.
 function getReportGroups() {
   if (reportBreakdown === 'segment') {
@@ -1810,7 +1655,6 @@ function getReportGroups() {
     filter: e => e.mgr === mgr.id,
   }));
 }
-
 // Строки отчёта (в порядке отображения). kind: total | done | chain.
 const REPORT_ROWS = [
   { key:'total',         label:'Всего назначено',                       kind:'total', title:'Все назначенные встречи за период' },
@@ -1822,10 +1666,8 @@ const REPORT_ROWS = [
   { key:'mv_gtm_done',   label:'Перенесено → Отдано в ТМ → Проведено', kind:'chain', title:'Перенос → отдано в ТМ → проведено' },
   { key:'done',          label:'Проведено',                             kind:'done',  title:'Всего доведено до "Проведено" (любым путём)' },
 ];
-
 const DAY_MS   = 86400000;
 const HANG_DAYS = 7;   // порог "висит дольше N дней" для незакрытых встреч
-
 // Разбираем журнал в массив {key, ts:Date|null} в хронологическом порядке.
 function parseJournalTs(raw) {
   let lines = [];
@@ -1843,7 +1685,6 @@ function parseJournalTs(raw) {
     })
     .filter(x => JOURNAL_KEYS.includes(x.key));
 }
-
 // Время начала встречи из полей entry (фолбэк, если журнал пуст).
 function entryStartMs(e) {
   if (!e.date) return null;
@@ -1851,7 +1692,6 @@ function entryStartMs(e) {
   const t = new Date(e.date + 'T' + String(h).padStart(2, '0') + ':' + (mn || '00'));
   return isNaN(t) ? null : t.getTime();
 }
-
 // Пустой шаблон счётчиков (используется и как аккумулятор итога).
 function emptyCounters() {
   return { total:0, mv_done:0, mv_gtm:0, mv_cancel:0, mv_gtm_cancel:0, mv_gtm_done:0,
@@ -1859,7 +1699,6 @@ function emptyCounters() {
            conf_cancel:0, conf_moved:0,
            durDoneSum:0, durDoneN:0, firstMoveSum:0, firstMoveN:0, hang:0 };
 }
-
 // Считаем все показатели по одной группе встреч.
 function countGroup(es) {
   const c   = emptyCounters();
@@ -1886,7 +1725,6 @@ function countGroup(es) {
     if (hasMoved) c.movedAny++;
     if (hasGtm)   c.gtmAll++;
     c.movesTotal += seq.filter(k => k === 'moved').length;
-
     if (hasMoved) {
       if (hasGtm) {
         if      (final === 'cancel') c.mv_gtm_cancel++;
@@ -1897,7 +1735,6 @@ function countGroup(es) {
         else if (final === 'cancel') c.mv_cancel++;
       }
     }
-
     // ── Время (по таймстемпам журнала) ──
     const firstTs = (full[0] && full[0].ts) ? full[0].ts.getTime() : entryStartMs(e);
     if (final === 'done') {
@@ -1914,7 +1751,6 @@ function countGroup(es) {
         if (d >= 0) { c.firstMoveSum += d; c.firstMoveN++; }
       }
     }
-
     // ── Неявка (прокси): встреча в прошлом, не закрыта, статус назначена/подтверждена ──
     const terminal = (final === 'done' || final === 'cancel');
     if (!terminal) {
@@ -1928,35 +1764,27 @@ function countGroup(es) {
   });
   return c;
 }
-
 // Суммируем массив счётчиков в один.
 function sumCounters(list) {
   const T = emptyCounters();
   list.forEach(c => Object.keys(T).forEach(k => T[k] += (c[k] || 0)));
   return T;
 }
-
 function renderAnalytics() {
   const wrap = document.getElementById('analytics-table');
   if (!wrap) return;
-
   const ds      = getDates().map(dateKey);
   const entries = allEntries.filter(e => ds.includes(e.date));   // все встречи за период
   const groups  = getReportGroups();
-
-
   // Данные по группам (колонки). Показываем ВСЕ группы — все сегменты/источники/ТМ,
   // даже пустые (с нулями), чтобы был виден полный список.
   let cols = groups.map(g => ({ name: g.name, c: countGroup(entries.filter(g.filter)) }));
-
   // Итог по всем группам
   const T = sumCounters(cols.map(col => col.c));
-
   // Предыдущий период (для стрелок динамики)
   const prevDs  = getPrevDates().map(dateKey);
   const prevAll = prevEntries.filter(e => prevDs.includes(e.date));   // все встречи прошлого периода
   const P = countGroup(prevAll);
-
   const pct  = (n, d) => d ? Math.round(n / d * 100) + '%' : '—';
   const days = (sum, n) => n ? (sum / n).toFixed(1).replace('.', ',') + ' дн' : '—';
   const delta = (cur, prev) => {
@@ -1970,11 +1798,9 @@ function renderAnalytics() {
     if (d === 0) return `<span class="dlt dlt-flat">→ 0 п.п.</span>`;
     return `<span class="dlt ${d>0?'dlt-up':'dlt-down'}">${d>0?'▲':'▼'} ${Math.abs(d)} п.п.</span>`;
   };
-
   const recovered    = T.gtmAll ? T.mv_gtm_done : 0;
   const doneRate     = T.total ? T.done / T.total : 0;
   const prevDoneRate = P.total ? P.done / P.total : 0;
-
   // ── Воронка + качество источника ──
   const summary = `
     <div class="funnel">
@@ -1994,29 +1820,24 @@ function renderAnalytics() {
     </div>`;
   const sumEl = document.getElementById('funnel-summary');
   if (sumEl) sumEl.innerHTML = T.total ? summary : '';
-
   // ── Транспонированная таблица ──
   if (!cols.length) {
     wrap.innerHTML = '<div style="text-align:center;color:#aaa;padding:16px">Нет данных за период</div>';
     setTimeout(fitBX24Window, 50);
     return;
   }
-
   const colLabel = reportBreakdown === 'segment' ? 'Сегмент'
                  : reportBreakdown === 'source'  ? 'Источник лида'
                  : reportBreakdown === 'tm'      ? 'Телемаркетолог' : 'Менеджер ОП';
   const avgDone  = doneRate;
   const ncols    = cols.length + 2; // подпись + группы + Итого
-
   // Загрузка слотов: рабочие дни периода × слоты 9–18
   const workdays = getDates().filter(d => { const g = d.getDay(); return g >= 1 && g <= 5; }).length;
   const availPer = Math.max(workdays, 1) * SLOTS.length;
-
   // ══ ТАБЛИЦА: строки = группы, столбцы = показатели (по секциям) ══
   // Каждый столбец: {sec, label, title, fmt(counter)->текст, cls?(counter)->класс}
   const rate = c => c.total ? c.done / c.total : 0;
   const rateCls = c => c.total < 5 ? '' : (rate(c) >= avgDone*1.15 ? 'cr-good' : (rate(c) < avgDone*0.7 ? 'cr-low' : ''));
-
   const COLS = [
     // ── Исходы встреч, шт ──
     { sec:'Исходы встреч, шт', label:'Всего назначено',              title:'Все назначенные встречи за период', fmt:c=>c.total||0 },
@@ -2046,7 +1867,6 @@ function renderAnalytics() {
     COLS.push({ sec:'Загрузка', label:'Занято слотов %', title:'Встречи / доступные слоты за период',
       fmt:c=>Math.round(c.total/availPer*100)+'%', cls:c=>{const u=c.total/availPer;return u>1?'cr-low':(u<0.3?'cr-mid':'');} });
   }
-
   // Верхняя строка заголовков — секции (объединённые ячейки)
   const secSpans = [];
   COLS.forEach(col => {
@@ -2054,14 +1874,12 @@ function renderAnalytics() {
     if (last && last.sec === col.sec) last.span++;
     else secSpans.push({ sec: col.sec, span: 1 });
   });
-
   let html = '<table class="an-table rep-t rep-wide"><thead>';
   html += `<tr><th class="grp-h" rowspan="2">${colLabel}</th>`;
   secSpans.forEach(s => html += `<th class="sec-h" colspan="${s.span}">${s.sec}</th>`);
   html += '</tr><tr>';
   COLS.forEach(col => html += `<th class="right col-h" title="${col.title||''}">${col.label}</th>`);
   html += '</tr></thead><tbody>';
-
   // Строки групп
   cols.forEach(col => {
     html += `<tr><td class="grp-c">${escapeHtml(col.name)}</td>`;
@@ -2078,20 +1896,16 @@ function renderAnalytics() {
     html += `<td class="right ${extra}">${mc.fmt(T)}</td>`;
   });
   html += '</tr>';
-
   html += '</tbody></table>';
   wrap.innerHTML = html;
-
   setTimeout(fitBX24Window, 50);
 }
-
 // Мини-карточка "качество источника" (блок под воронкой).
 function srcQualityCard(label, es) {
   const c = countGroup(es);
   const rate = c.total ? Math.round(c.done / c.total * 100) : 0;
   return `<span class="srcq-card"><b>${label}</b>: ${c.total} встреч · ${c.done} провед. · <b>${c.total?rate+'%':'—'}</b> дов.</span>`;
 }
-
 // Даты предыдущего периода (для сравнения динамики).
 function getPrevDates() {
   if (period === 'day') return [addDays(currentDate, -1)];
@@ -2122,7 +1936,6 @@ function getPrevDates() {
   }
   return [addDays(currentDate, -1)];
 }
-
 // ════════════════════════════════════════════════
 //  ДЕКОМПОЗИЦИЯ ОП + ПЛАНЫ
 // ════════════════════════════════════════════════
@@ -2132,12 +1945,10 @@ let decompMonthKey = '';         // какой месяц загружен в de
 let planMonth      = null;       // ОБЩИЙ план месяца { cr, workdays, _id }
 let dealsArrivedCache = {};      // { 'YYYY-MM': кол-во сделок, созданных в месяце }
 let planStorageMode = '';        // '' | 'b24' | 'local'
-
 function monthKeyOf(d){ return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0'); }
 function monthRange(d){ const y=d.getFullYear(), m=d.getMonth(); return [new Date(y,m,1), new Date(y,m+1,0)]; }
 function monthWorkdays(d){ const [s,e]=monthRange(d); const arr=[]; for(let x=new Date(s); x<=e; x.setDate(x.getDate()+1)){ const g=x.getDay(); if(g>=1&&g<=5) arr.push(new Date(x)); } return arr; }
 function workdaysInMonth(d){ return monthWorkdays(d).length; }
-
 // "Сделок пришло" за месяц = число сделок (crm.deal), созданных в месяце.
 // Это плановое кол-во назначенных встреч (общий план на весь ОП).
 async function getDealsArrived(mk){
@@ -2154,7 +1965,6 @@ async function getDealsArrived(mk){
     return total;
   }catch(err){ log('⚠️ crm.deal.list (сделок пришло): ' + err.message); dealsArrivedCache[mk] = 0; return 0; }
 }
-
 // ── Хранилище планов: B24 entity API + фолбэк в localStorage ──
 const PLAN_ENTITY = 'sh_plans_v1';
 async function ensurePlanEntity(){
@@ -2202,13 +2012,11 @@ async function savePlanMonth(mk, data){
   planMonth = data;
   return 'local';
 }
-
 async function initDecompView(){
   if(!planStorageMode) await ensurePlanEntity();
   await loadPlanForMonth(monthKeyOf(currentDate));
   if(decompSub === 'plans') renderPlans(); else renderDecomp();
 }
-
 function setDecompSub(sub, el){
   decompSub = sub;
   document.getElementById('ds-report').classList.toggle('active', sub === 'report');
@@ -2218,7 +2026,6 @@ function setDecompSub(sub, el){
   if(sub === 'plans') renderPlans(); else renderDecomp();
   setTimeout(fitBX24Window, 60);
 }
-
 function renderPlans(){
   const p = planMonth || { cr: 75, workdays: workdaysInMonth(currentDate) };
   document.getElementById('plan-cr').value = (p.cr != null ? p.cr : 75);
@@ -2227,7 +2034,6 @@ function renderPlans(){
   const st = document.getElementById('plan-status');
   if(st) st.textContent = 'Хранилище: ' + (planStorageMode === 'b24' ? 'Б24 (общее для всех)' : 'localStorage (только этот браузер)');
 }
-
 async function renderPlanPreviewTable(){
   const mk = monthKeyOf(currentDate);
   const deals = await getDealsArrived(mk);
@@ -2240,9 +2046,7 @@ async function renderPlanPreviewTable(){
     + `<tr class="r-done"><td>План проведённых (= назначенные × CR)</td><td class="right"><b>${done}</b></td></tr>`
     + '</tbody>';
 }
-
 function recalcPlanPreview(){ renderPlanPreviewTable(); }
-
 function savePlanFromForm(){
   const mk = monthKeyOf(currentDate);
   const data = {
@@ -2259,15 +2063,12 @@ function savePlanFromForm(){
     renderDecomp();
   });
 }
-
 async function renderDecomp(){
   const wrap = document.getElementById('decomp-table'); if(!wrap) return;
   const mk = monthKeyOf(currentDate);
   const lbl = document.getElementById('decomp-month-lbl');
   if(lbl) lbl.textContent = '· ' + currentDate.toLocaleDateString('ru-RU', {month:'long', year:'numeric'});
-
   wrap.innerHTML = '<div style="text-align:center;color:#aaa;padding:16px">Загрузка...</div>';
-
   if(decompMonthKey !== mk){
     const [s,e] = monthRange(currentDate);
     try{ decompEntries = await loadEntries(dateKey(s), dateKey(e)); }catch(err){ decompEntries = []; }
@@ -2276,16 +2077,12 @@ async function renderDecomp(){
   } else if(!planMonth){
     await loadPlanForMonth(mk);
   }
-
   const dealsArrived = await getDealsArrived(mk);
-
   const days = monthWorkdays(currentDate);
   const today = new Date(); today.setHours(23,59,59,999);
   const dayIndex = {}; days.forEach((d,i) => dayIndex[dateKey(d)] = i);
-
   const mgrs = getFilteredManagers().map(m => String(m.id));
   const mgrSet = new Set(mgrs);
-
   // ── ОБЩИЙ план на весь ОП ──
   const cr = (planMonth && planMonth.cr != null) ? planMonth.cr : 75;
   const wd = (planMonth && planMonth.workdays) || workdaysInMonth(currentDate);
@@ -2293,18 +2090,14 @@ async function renderDecomp(){
   const planDoneTotal     = Math.round(planAssignedTotal * cr / 100);
   const planACum = i => Math.round(planAssignedTotal * Math.min(i+1, wd) / wd);
   const planDCum = i => Math.round(planDoneTotal * Math.min(i+1, wd) / wd);
-
   const es = decompEntries.filter(e => (!mgrs.length || mgrSet.has(String(e.mgr))));
-
   const fmtCol = d => String(d.getDate()).padStart(2,'0') + '.' + String(d.getMonth()+1).padStart(2,'0');
   const pctv = (n,dn) => dn ? Math.round(n/dn*100) + '%' : '';
   const isFuture = d => d.getTime() > today.getTime();
   const ncol = days.length + 2;
-
   let html = '<table class="an-table rep-t"><thead><tr><th>Показатель</th>';
   days.forEach(d => html += `<th class="right">${fmtCol(d)}<br><span style="font-weight:400;font-size:10px">${['вс','пн','вт','ср','чт','пт','сб'][d.getDay()]}</span></th>`);
   html += '<th class="right gtotal">Итого</th></tr></thead><tbody>';
-
   // ── План (общий) ──
   html += `<tr class="sec-row"><td colspan="${ncol}">План по назначенным и проведённым встречам · назн ${planAssignedTotal} (сделок пришло) / пров ${planDoneTotal} / CR ${cr}%</td></tr>`;
   html += '<tr class="dec-plan"><td>Назначенные встречи (нарастающим)</td>';
@@ -2316,7 +2109,6 @@ async function renderDecomp(){
   html += '<tr class="dec-plan"><td>CR (план)</td>';
   days.forEach(() => html += `<td class="decd">${cr}%</td>`);
   html += `<td class="right gtotal">${cr}%</td></tr>`;
-
   // ── Факт-блоки: ТМ (полный) и Свои (короткий). План общий; отклонения ТМ считаются к нему. ──
   const blocks = [
     { name:'Встреч от ТМ', match: e => e.source === 'tm',  rows:['a_day','a_cum','a_dev','d_day','d_cum','d_dev','cr','cr_dev','cr_wk'] },
@@ -2333,7 +2125,6 @@ async function renderDecomp(){
     cr_dev:'Отклонение CR (п.п.)',
     cr_wk:'CR недельный',
   };
-
   blocks.forEach(b => {
     const A = days.map(()=>0), D = days.map(()=>0);
     es.forEach(e => {
@@ -2346,7 +2137,6 @@ async function renderDecomp(){
     const aCum = [], dCum = []; let aC = 0, dC = 0;
     days.forEach((d,i) => { aC += A[i]; dC += D[i]; aCum.push(aC); dCum.push(dC); });
     let wkc = 0; const weekIdx = days.map((d,i) => { if(i>0 && d.getDay()===1) wkc++; return wkc; });
-
     html += `<tr class="sec-row"><td colspan="${ncol}">Факт: ${b.name}</td></tr>`;
     b.rows.forEach(k => {
       html += `<tr><td>${LABELS[k]}</td>`;
@@ -2380,7 +2170,6 @@ async function renderDecomp(){
   wrap.innerHTML = html;
   setTimeout(fitBX24Window, 50);
 }
-
 // ════════════════════════════════════════════════
 //  МОДАЛКА
 // ════════════════════════════════════════════════
@@ -2394,7 +2183,6 @@ function buildMgrOptions(list, selectedId) {
     `<option value="${m.id}"${m.id === String(selectedId) ? ' selected' : ''}>${m.name}</option>`
   ).join('');
 }
-
 function onSegmentChange() {
   const segVal   = document.getElementById('m-segment').value;
   const filtered = managersForSegmentValue(segVal);
@@ -2405,7 +2193,6 @@ function onSegmentChange() {
     log('⚠️ Для сегмента "' + (segmentFieldItems.find(i=>i.id===segVal)||{}).label + '" не найден отдел/менеджеры — показаны все менеджеры.');
   }
 }
-
 function canEditEntry(entry) {
   if (!entry) return true;
   if (!currentUserId) return true;      // нет данных о юзере → не блокируем
@@ -2413,7 +2200,6 @@ function canEditEntry(entry) {
   const me = String(currentUserId);
   return entry.mgr === me || entry.assigned === me || entry.creator === me;
 }
-
 function applyEditableState(editable) {
   const ids = ['m-tmqual','m-segment','m-mgr','m-date','m-time','m-source','m-tm','m-client','m-status'];
   ids.forEach(id => {
@@ -2425,7 +2211,6 @@ function applyEditableState(editable) {
   const note = document.getElementById('readonly-note');
   if (note) note.style.display = editable ? 'none' : 'block';
 }
-
 function openEntityCard() {
   if (!modalEntityId) return;
   const path = (modalEntityType === 'deal' ? '/crm/deal/details/' : '/crm/lead/details/') + modalEntityId + '/';
@@ -2435,14 +2220,23 @@ function openEntityCard() {
       return;
     }
   } catch (e) { /* fallthrough */ }
-  const domain = (typeof BX24 !== 'undefined' && BX24.getDomain) ? BX24.getDomain() : 'crm.seller24.ru';
-  window.open('https://' + domain + path, '_blank');
+  // ПРАВКА №2: во встроенном виджете window.open('_blank') блокируется — переводим
+  // родительское окно (как в openLeadCard), чтобы «проваливание» в лид/сделку работало.
+  const domain = currentDomain || (location.hostname.endsWith('seller24.ru') ? location.hostname : 'crm.seller24.ru');
+  const url = 'https://' + domain + path;
+  try {
+    if (window.top && window.top !== window.self) {
+      window.top.location.href = url;
+    } else {
+      window.open(url, '_blank');
+    }
+  } catch (e) {
+    window.open(url, '_blank');
+  }
 }
-
 function openModal(id, mgrId, slot, date) {
   log('🖱️ openModal: id=' + id + ', mgr=' + mgrId + ', slot=' + slot + ', date=' + date);
   editId = id; modalMgr = mgrId; modalSlot = slot; modalDate = date;
-
   document.getElementById('m-mgr').innerHTML = buildMgrOptions(managers, mgrId);
   document.getElementById('m-tm').innerHTML = tms.map(t =>
     `<option value="${t.id}">${t.name}</option>`
@@ -2451,13 +2245,11 @@ function openModal(id, mgrId, slot, date) {
     segmentFieldItems.map(i => `<option value="${i.id}">${i.label}</option>`).join('');
   document.getElementById('m-tmqual').innerHTML = '<option value="">— не указан —</option>' +
     tmqualItems.map(i => `<option value="${i.id}">${escapeHtml(i.label)}</option>`).join('');
-
   const _pad = t => { const p = String(t || '9:00').split(':'); return String(p[0]).padStart(2,'0') + ':' + String(p[1] || '00').padStart(2,'0'); };
   document.getElementById('m-date').value = date;
   document.getElementById('m-time').value = _pad(slot);
   updateDateTimePreview();
   document.getElementById('modal-title').textContent = id ? 'Редактировать встречу' : 'Новая встреча';
-
   const leadInfo = document.getElementById('lead-id-info');
   const activeLeadId = id || currentLeadId;
   const e0 = id ? allEntries.find(x => x.id === id) : null;
@@ -2472,12 +2264,9 @@ function openModal(id, mgrId, slot, date) {
     leadInfo.style.display = 'none';
     modalEntityId = null;
   }
-
   const editable = canEditEntry(e0);
   applyEditableState(editable);
-
   document.getElementById('btn-del').style.display = (id && editable) ? 'block' : 'none';
-
   if (id) {
     const e = allEntries.find(x => x.id === id);
     if (e) {
@@ -2494,7 +2283,6 @@ function openModal(id, mgrId, slot, date) {
     document.getElementById('m-source').value = currentLeadId ? 'tm' : 'tm';
     document.getElementById('m-client').value = '';
     document.getElementById('m-segment').value = activeSegmentId || '';
-
     if (currentLeadId) {
       apiOne('crm.lead.get', { id: parseInt(currentLeadId) })
         .then(lead => {
@@ -2521,7 +2309,6 @@ function openModal(id, mgrId, slot, date) {
   }
   toggleTM();
   applyStatusColor();
-
   try {
     if (typeof BX24 !== 'undefined') {
       if (typeof BX24.scrollParentWindow === 'function') BX24.scrollParentWindow(0);
@@ -2532,14 +2319,12 @@ function openModal(id, mgrId, slot, date) {
     }
     window.scrollTo(0, 0);
   } catch (e) { /* ignore */ }
-
   const mb = document.getElementById('modal-bg');
   mb.classList.add('open');
   mb.scrollTop = 0;
   const mdl = mb.querySelector('.modal');
   if (mdl) mdl.scrollTop = 0;
 }
-
 function updateDateTimePreview() {
   const d = document.getElementById('m-date').value;
   const t = document.getElementById('m-time').value;
@@ -2552,12 +2337,10 @@ function updateDateTimePreview() {
   const mon  = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'][m - 1];
   box.textContent = '📅 ' + day + ' ' + mon + ' ' + y + ' (' + dow + '), ' + t;
 }
-
 function toggleTM() {
   document.getElementById('tm-field').style.display =
     document.getElementById('m-source').value === 'own' ? 'none' : 'block';
 }
-
 // Живая подсветка селекта статуса в модалке цветом соответствующего статуса.
 function applyStatusColor() {
   const sel = document.getElementById('m-status'); if (!sel) return;
@@ -2576,12 +2359,10 @@ function closeModal() {
 document.getElementById('modal-bg').addEventListener('click', e => {
   if (e.target === e.currentTarget) closeModal();
 });
-
 // ════════════════════════════════════════════════
 //  ПЕРЕКЛЮЧАТЕЛИ
 // ════════════════════════════════════════════════
 let currentView = 'grid'; // 'grid' | 'report'
-
 function setView(v) {
   currentView = v;
   document.getElementById('view-grid').style.display   = v === 'grid'   ? '' : 'none';
@@ -2590,21 +2371,17 @@ function setView(v) {
   document.getElementById('vs-grid').classList.toggle('active',   v === 'grid');
   document.getElementById('vs-report').classList.toggle('active', v === 'report');
   document.getElementById('vs-decomp').classList.toggle('active', v === 'decomp');
-
   const qBtn = document.querySelector('#period-tabs [data-period="quarter"]');
   if (qBtn) qBtn.style.display = (v === 'grid') ? 'none' : '';
-
   if (v === 'grid' && period === 'quarter') {
     const mBtn = document.querySelector('#period-tabs [data-period="month"]');
     if (mBtn) setPeriod('month', mBtn);
   }
-
   if (v === 'grid') renderGrid();
   else if (v === 'report') renderAnalytics();
   else if (v === 'decomp') initDecompView();
   setTimeout(fitBX24Window, 60);
 }
-
 function setPeriod(p, el) {
   period = p;
   document.querySelectorAll('#period-tabs .tab-btn').forEach(t => t.classList.remove('active'));
@@ -2623,13 +2400,11 @@ function setPeriod(p, el) {
   }
   loadData();
 }
-
 function onDateChange() {
   const dp = document.getElementById('date-pick');
   if (dp.value) currentDate = new Date(dp.value + 'T12:00:00');
   loadData();
 }
-
 function onRangeChange() {
   const f = document.getElementById('date-from').value;
   const t = document.getElementById('date-to').value;
@@ -2637,7 +2412,6 @@ function onRangeChange() {
   if (t) dateTo   = new Date(t + 'T12:00:00');
   if (dateFrom && dateTo && dateFrom <= dateTo) loadData();
 }
-
 // ════════════════════════════════════════════════
 //  ЗАГРУЗКА
 // ════════════════════════════════════════════════
@@ -2646,9 +2420,7 @@ function setStatus(msg, type='') {
   el.textContent = msg;
   el.className   = 'status-bar' + (type ? ' '+type : '');
 }
-
 const BUILD_VERSION = 'shahmatka build 2026-07-30 #60 (контекст сделки — приоритет при сохранении)';
-
 function log(msg) {
   const b = document.getElementById('debug-box');
   b.style.display = 'block';
@@ -2656,21 +2428,16 @@ function log(msg) {
   const lines = b.innerHTML.split('<br>');
   if (lines.length > 400) b.innerHTML = lines.slice(-400).join('<br>');
 }
-
 let usersLoaded = false;
-
 async function loadData(forceReloadUsers=false) {
   setStatus('Загрузка...', 'loading');
   if (forceReloadUsers) decompMonthKey = '';   // заставить декомпозицию перечитать месяц
-
   const dates = getDates();
   const from  = dateKey(dates[0]);
   const to    = dateKey(dates[dates.length - 1]);
-
   // ── 1. МГНОВЕННАЯ ОТРИСОВКА ИЗ КЭША ──
   const cachedUsers = !forceReloadUsers && cacheGet('sh_users', 60 * 60 * 1000);
   const cachedLeads = !forceReloadUsers && cacheGet('sh_leads_' + from + '_' + to, 90 * 1000);
-
   if (cachedUsers && cachedLeads) {
     managers = cachedUsers.managers;
     tms      = cachedUsers.tms;
@@ -2691,7 +2458,6 @@ async function loadData(forceReloadUsers=false) {
     document.getElementById('grid-loader').style.display = 'block';
     document.getElementById('grid').style.display = 'none';
   }
-
   // ── 2. ФОНОВОЕ ОБНОВЛЕНИЕ ──
   try {
     if (!usersLoaded || forceReloadUsers) {
@@ -2704,7 +2470,6 @@ async function loadData(forceReloadUsers=false) {
     } else {
       allEntries = (await loadEntries(from, to, forceReloadUsers)) || [];
     }
-
     // Предыдущий период — для стрелок динамики в отчёте (фоново, не критично).
     try {
       const pv = getPrevDates();
@@ -2715,7 +2480,6 @@ async function loadData(forceReloadUsers=false) {
       prevEntries = [];
       log('⚠️ Предыдущий период не загружен: ' + e.message);
     }
-
     if (currentLeadId) {
       try {
         const lead = await apiOne('crm.lead.get', { id: parseInt(currentLeadId) });
@@ -2724,13 +2488,11 @@ async function loadData(forceReloadUsers=false) {
         } else {
           log('📋 Лид #' + currentLeadId + ' получен. ' + F.date + ' = ' + (lead[F.date] || 'ПУСТО'));
           log('   менеджер ASSIGNED_BY_ID = ' + lead.ASSIGNED_BY_ID + ', статус = ' + JSON.stringify(lead[F.status]));
-
           if (!lead[F.date]) {
             log('⚠️ В лиде поле ' + F.date + ' пустое — встреча не назначена');
           } else {
             const mapped = mapLead(lead);
             log('   → mapped: date=' + mapped.date + ', slot=' + mapped.slot + ', mgr=' + mapped.mgr + ', status=' + mapped.status);
-
             const mgrInList = managers.find(m => m.id === mapped.mgr);
             if (!mgrInList) {
               log('⚠️ Менеджер #' + mapped.mgr + ' НЕ в отделе ОП. Добавлю его в сетку временно.');
@@ -2753,11 +2515,9 @@ async function loadData(forceReloadUsers=false) {
             } else {
               log('✅ Менеджер: ' + mgrInList.name);
             }
-
             allEntries = allEntries.filter(e => e.id !== currentLeadId);
             allEntries.push(mapped);
             log('🎯 Лид добавлен в сетку. Всего entries: ' + allEntries.length);
-
             if (!autoJumpDone) {
               const todayKey = dateKey(currentDate);
               if (mapped.date && mapped.date !== todayKey) {
@@ -2768,7 +2528,6 @@ async function loadData(forceReloadUsers=false) {
               }
               autoJumpDone = true;
             }
-
             if (mapped.segment) {
               activeSegmentId = mapped.segment;
               const segSel = document.getElementById('segment-filter');
@@ -2781,7 +2540,6 @@ async function loadData(forceReloadUsers=false) {
         log('⚠️ Ошибка получения лида: ' + e.message);
       }
     }
-
     setStatus('Обновлено ' + new Date().toLocaleTimeString('ru-RU'));
   } catch (e) {
     setStatus('Ошибка: ' + e.message, 'error');
@@ -2795,7 +2553,6 @@ async function loadData(forceReloadUsers=false) {
     if (currentView === 'decomp') renderDecomp();
   }
 }
-
 function clearLead() {
   currentLeadId = null;
   document.getElementById('lead-banner').style.display = 'none';
@@ -2805,7 +2562,6 @@ function clearLead() {
   renderGrid();
   renderAnalytics();
 }
-
 // ════════════════════════════════════════════════
 //  ПРИВЯЗКА ВКЛАДКИ К ЛИДУ/СДЕЛКЕ (placement.bind)
 // ════════════════════════════════════════════════
@@ -2816,7 +2572,6 @@ const PLACEMENTS  = [
   'CRM_LEAD_LIST_MENU',
   'CRM_DEAL_LIST_MENU',
 ];
-
 function loadBX24() {
   return new Promise((resolve, reject) => {
     if (typeof BX24 !== 'undefined') return resolve();
@@ -2829,7 +2584,6 @@ function loadBX24() {
     setTimeout(() => reject(new Error('таймаут')), 3000);
   });
 }
-
 async function checkPlacements() {
   try {
     await loadBX24();
@@ -2839,7 +2593,6 @@ async function checkPlacements() {
   }
   BX24.init(async function () {
     fitBX24Window();
-
     try {
       BX24.callMethod('user.current', {}, function (res) {
         if (!res.error()) {
@@ -2855,13 +2608,11 @@ async function checkPlacements() {
     } catch (e) {
       log('⚠️ user.current: ' + e.message);
     }
-
     try {
       const info = BX24.placement.info();
       log('📍 Placement: ' + info.placement + (info.options ? ' ' + JSON.stringify(info.options) : ''));
       const opts = info.options || {};
       const entityId = opts.ID || opts.id || opts.ENTITY_ID || opts.entityId;
-
       if (entityId && (info.placement === 'CRM_LEAD_DETAIL_TAB' || info.placement === 'CRM_LEAD_LIST_MENU')) {
         currentLeadId = String(entityId);
         // Проверяем: не сконвертирован ли лид? Если у него есть связанная сделка
@@ -2897,7 +2648,6 @@ async function checkPlacements() {
     } catch (e) {
       log('⚠️ placement.info: ' + e.message);
     }
-
     BX24.callMethod('placement.get', {}, function (result) {
       if (result.error()) { log('⚠️ placement.get: ' + JSON.stringify(result.error())); return; }
       const bound = (result.data() || []).map(p => p.placement);
@@ -2912,9 +2662,7 @@ async function checkPlacements() {
     });
   });
 }
-
 const WEBHOOK_URL = 'https://crm.seller24.ru/rest/5/9yr3u419ap9cvzn7';
-
 function bindOne(placement) {
   return new Promise(async resolve => {
     let done = false;
@@ -2940,7 +2688,6 @@ function bindOne(placement) {
         resolve({ ok: false, placement, error: e.message });
       }
     }, 8000);
-
     BX24.callMethod('placement.bind', {
       PLACEMENT: placement, HANDLER: HANDLER_URL, TITLE: 'Шахматка',
     }, function(result) {
@@ -2964,24 +2711,19 @@ function bindOne(placement) {
     });
   });
 }
-
 async function registerPlacements() {
   const btn = document.getElementById('btn-bind');
   const setBtn = (text, color) => {
     if (btn) { btn.textContent = text; if (color) { btn.style.background = color; btn.style.borderColor = color; } }
   };
-
   log('🔧 registerPlacements: старт');
   setBtn('⏳ Привязываю...');
-
   if (typeof BX24 === 'undefined') {
     log('⚠️ BX24 нет, использую только webhook');
   }
-
   const results = await Promise.all(PLACEMENTS.map(bindOne));
   const ok      = results.filter(r => r.ok).length;
   const errors  = results.filter(r => !r.ok);
-
   if (errors.length === 0) {
     setBtn('✅ Привязано! Обнови Б24 (F5)', '#3B6D11');
     log('🎉 Все ' + ok + ' placement привязаны');
@@ -2995,7 +2737,6 @@ async function registerPlacements() {
     }
   }
 }
-
 // Определяет "активную сущность" встречи по ID лида:
 // если существует сделка с этим LEAD_ID — активная = сделка, иначе = лид.
 // Возвращает {type:'deal'|'lead', id, dealId?, leadId}.
@@ -3019,18 +2760,15 @@ async function resolveActiveEntity(leadId) {
   }
   return { type: 'lead', id: lid, leadId: lid };
 }
-
 // Грузит встречу конкретной СДЕЛКИ и показывает её в сетке.
 // Требует, чтобы поля сделки были определены (DF). Помечает встречу как текущую.
 async function showDealMeeting(dealId) {
   if (!DF || !DF.date) { await loadDealFields(); }
   if (!DF || !DF.date) { log('⚠️ Не определены поля встречи в сделках — не могу показать встречу сделки.'); return; }
-
   const SELECT = ['ID','TITLE','STATUS_ID','SOURCE_ID','ASSIGNED_BY_ID','CREATED_BY_ID','LEAD_ID',
                   DF.date, DF.status, DF.manager, DF.tm, DF.segment, DF.tmqual, DF.journal, DF.calId].filter(Boolean);
   const deal = await apiOne('crm.deal.get', { id: parseInt(dealId), select: SELECT });
   if (!deal) { log('❌ Сделка #' + dealId + ' не найдена'); return; }
-
   if (!deal[DF.date]) {
     log('⚠️ В сделке #' + dealId + ' поле даты встречи пустое — встреча не назначена.');
     currentDealEntryId = null;
@@ -3038,11 +2776,9 @@ async function showDealMeeting(dealId) {
     renderGrid();
     return;
   }
-
   const mapped = mapDeal(deal);
   if (!mapped) { log('⚠️ Не удалось разобрать встречу сделки #' + dealId); return; }
   log('📋 Встреча сделки #' + dealId + ': date=' + mapped.date + ', mgr=' + mapped.mgr + ', status=' + mapped.status);
-
   // Менеджер может быть не в отделе ОП — добавим в сетку временно
   if (mapped.mgr && !managers.find(m => m.id === mapped.mgr)) {
     try {
@@ -3052,12 +2788,10 @@ async function showDealMeeting(dealId) {
       managers.push({ id: mapped.mgr, name: nm + ' (вне отдела ОП)' });
     } catch (e) { managers.push({ id: mapped.mgr, name: 'Пользователь #' + mapped.mgr }); }
   }
-
   // Кладём встречу сделки в сетку (id с префиксом, чтобы не путать с лидами)
   currentDealEntryId = mapped.id;
   allEntries = allEntries.filter(e => !(e.entity === 'deal' && e.id === mapped.id));
   allEntries.push(mapped);
-
   // Переключаемся на дату встречи
   if (!autoJumpDone && mapped.date && mapped.date !== dateKey(currentDate)) {
     const [y,m,d] = mapped.date.split('-').map(Number);
@@ -3065,23 +2799,19 @@ async function showDealMeeting(dealId) {
     const dp = document.getElementById('date-pick'); if (dp) dp.value = mapped.date;
     autoJumpDone = true;
   }
-
   showLeadBanner();
   renderGrid();
   log('🎯 Встреча сделки #' + dealId + ' в сетке.');
 }
-
 // ════════════════════════════════════════════════
 //  СТАРТ
 // ════════════════════════════════════════════════
 document.getElementById('date-pick').value = dateKey(currentDate);
-
 function showLeadBanner() {
   const banner = document.getElementById('lead-banner');
   banner.style.display = 'block';
   const titleEl = document.getElementById('lead-banner-title');
   const domain = currentDomain || (location.hostname.endsWith('seller24.ru') ? location.hostname : 'crm.seller24.ru');
-
   // Контекст сделки (после конвертации) — показываем сделку, а не лид
   if (currentDealId && !currentLeadId) {
     titleEl.textContent = 'Сделка #' + currentDealId;
@@ -3094,11 +2824,8 @@ function showLeadBanner() {
     }).catch(()=>{});
     return;
   }
-
   titleEl.textContent = 'Лид #' + currentLeadId;
-
   const leadUrl = 'https://' + domain + '/crm/lead/details/' + currentLeadId + '/';
-
   banner.style.cursor = 'pointer';
   banner.onclick = () => {
     try {
@@ -3111,7 +2838,6 @@ function showLeadBanner() {
       window.open(leadUrl, '_blank');
     }
   };
-
   apiOne('crm.lead.get', { id: parseInt(currentLeadId) }).then(lead => {
     if (lead && lead.TITLE) {
       titleEl.innerHTML = '<u>Лид #' + currentLeadId + ' — ' + escapeHtml(lead.TITLE) + '</u> <small>(открыть карточку)</small>';
@@ -3120,11 +2846,9 @@ function showLeadBanner() {
     }
   }).catch(e => log('⚠️ crm.lead.get: ' + e.message));
 }
-
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
-
 function openLeadCard(leadId) {
   const domain = currentDomain || (location.hostname.endsWith('seller24.ru') ? location.hostname : 'crm.seller24.ru');
   const url = 'https://' + domain + '/crm/lead/details/' + leadId + '/';
@@ -3138,7 +2862,6 @@ function openLeadCard(leadId) {
     window.open(url, '_blank');
   }
 }
-
 if (currentLeadId) showLeadBanner();
 if (currentDealId && !currentLeadId) {
   // Открыто из сделки через URL — показываем встречу САМОЙ сделки (не перескок на лид).
@@ -3148,7 +2871,6 @@ if (currentDealId && !currentLeadId) {
     catch (e) { log('⚠️ Старт из сделки: ' + e.message); }
   })();
 }
-
 async function reloadAll() {
   log('↻ Полное обновление (сегменты + отделы + пользователи + лиды)...');
   await Promise.all([
@@ -3161,7 +2883,6 @@ async function reloadAll() {
   renderGrid();
   renderAnalytics();
 }
-
 function clearAllCache() {
   try {
     const keys = [];
@@ -3176,7 +2897,6 @@ function clearAllCache() {
   }
   location.reload();
 }
-
 checkPlacements();
 log('🔧 ' + BUILD_VERSION);
 setView('grid'); // стартуем на Шахматке; прячем Квартал
