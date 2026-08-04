@@ -2211,19 +2211,32 @@ function applyEditableState(editable) {
   const note = document.getElementById('readonly-note');
   if (note) note.style.display = editable ? 'none' : 'block';
 }
-function openEntityCard() {
-  if (!modalEntityId) return;
-  const path = (modalEntityType === 'deal' ? '/crm/deal/details/' : '/crm/lead/details/') + modalEntityId + '/';
+// Открыть карточку лида/сделки. Универсальный помощник для ссылки в модалке и ПКМ.
+// ПРАВКА №2: сделку/лид открываем РОДНЫМ способом Битрикса — BX24.openPath
+// (карточка выезжает слайдером ВНУТРИ портала, шахматка остаётся в контексте).
+// Если BX24 ещё не загружен — догружаем его на лету. Навигация окна — только
+// как крайний фолбэк (BX24 недоступен вообще).
+async function openEntityPath(path) {
+  // 1) BX24.openPath — родной слайдер внутри портала.
   try {
-    if (typeof BX24 !== 'undefined' && BX24.openPath) {
-      BX24.openPath(path, function () {});
-      return;
+    if (typeof BX24 === 'undefined') { try { await loadBX24(); } catch (e) {} }
+    if (typeof BX24 !== 'undefined' && typeof BX24.openPath === 'function') {
+      let handled = false;
+      try {
+        BX24.openPath(path, function (res) {
+          // res.result === 'error' → путь не открылся слайдером (напр., вкладка).
+          if (res && res.result === 'error') { handled = false; log('ℹ️ openPath вернул error для ' + path); }
+        });
+        handled = true;
+        log('➡️ Открываю карточку через BX24.openPath: ' + path);
+      } catch (e) { handled = false; log('⚠️ BX24.openPath: ' + e.message); }
+      if (handled) return;
     }
   } catch (e) { /* fallthrough */ }
-  // ПРАВКА №2: во встроенном виджете window.open('_blank') блокируется — переводим
-  // родительское окно (как в openLeadCard), чтобы «проваливание» в лид/сделку работало.
+  // 2) Фолбэк — навигация окна портала (когда BX24 недоступен).
   const domain = currentDomain || (location.hostname.endsWith('seller24.ru') ? location.hostname : 'crm.seller24.ru');
   const url = 'https://' + domain + path;
+  log('➡️ Фолбэк-навигация на карточку: ' + url);
   try {
     if (window.top && window.top !== window.self) {
       window.top.location.href = url;
@@ -2233,6 +2246,11 @@ function openEntityCard() {
   } catch (e) {
     window.open(url, '_blank');
   }
+}
+function openEntityCard() {
+  if (!modalEntityId) return;
+  const path = (modalEntityType === 'deal' ? '/crm/deal/details/' : '/crm/lead/details/') + modalEntityId + '/';
+  openEntityPath(path);
 }
 function openModal(id, mgrId, slot, date) {
   log('🖱️ openModal: id=' + id + ', mgr=' + mgrId + ', slot=' + slot + ', date=' + date);
@@ -2849,18 +2867,13 @@ function showLeadBanner() {
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
-function openLeadCard(leadId) {
-  const domain = currentDomain || (location.hostname.endsWith('seller24.ru') ? location.hostname : 'crm.seller24.ru');
-  const url = 'https://' + domain + '/crm/lead/details/' + leadId + '/';
-  try {
-    if (window.top && window.top !== window.self) {
-      window.top.location.href = url;
-    } else {
-      window.open(url, '_blank');
-    }
-  } catch (e) {
-    window.open(url, '_blank');
-  }
+function openLeadCard(entryId) {
+  // ПКМ по ячейке: открываем карточку той сущности, которой принадлежит встреча
+  // (лид ИЛИ сделка), тем же родным способом Битрикса, что и ссылка в модалке.
+  const e = allEntries.find(x => x.id === String(entryId));
+  const isDeal = e && e.entity === 'deal';
+  const path = (isDeal ? '/crm/deal/details/' : '/crm/lead/details/') + entryId + '/';
+  openEntityPath(path);
 }
 if (currentLeadId) showLeadBanner();
 if (currentDealId && !currentLeadId) {
