@@ -2212,30 +2212,38 @@ function applyEditableState(editable) {
   if (note) note.style.display = editable ? 'none' : 'block';
 }
 // Открыть карточку лида/сделки. Универсальный помощник для ссылки в модалке и ПКМ.
-// ПРАВКА №2: сделку/лид открываем РОДНЫМ способом Битрикса — BX24.openPath
-// (карточка выезжает слайдером ВНУТРИ портала, шахматка остаётся в контексте).
-// Если BX24 ещё не загружен — догружаем его на лету. Навигация окна — только
-// как крайний фолбэк (BX24 недоступен вообще).
+// ПРАВКА №2: приложение размещено на том же домене, что и портал
+// (crm.seller24.ru/marketplace/app/…), поэтому надёжнее всего открыть карточку
+// РОДНЫМ слайдером портала через window.top.BX.SidePanel. Если он недоступен —
+// пробуем BX24.openPath, и только как крайний случай — навигацию окна.
+// Порядок способов + лог в дебаг-панели помогают увидеть, что реально сработало.
 async function openEntityPath(path) {
-  // 1) BX24.openPath — родной слайдер внутри портала.
+  const domain = currentDomain || (location.hostname.endsWith('seller24.ru') ? location.hostname : 'crm.seller24.ru');
+  const url = 'https://' + domain + path;
+
+  // 1) Родной слайдер портала. Приложение и портал на одном домене → доступ к
+  //    window.top.BX не блокируется браузером.
+  try {
+    const topWin = window.top;
+    const topBX  = topWin && topWin.BX;
+    if (topBX && topBX.SidePanel && topBX.SidePanel.Instance && typeof topBX.SidePanel.Instance.open === 'function') {
+      topBX.SidePanel.Instance.open(url, { width: 1000, cacheable: false });
+      log('➡️ Карточка открыта слайдером портала (BX.SidePanel): ' + path);
+      return;
+    }
+  } catch (e) { log('⚠️ SidePanel недоступен: ' + e.message); }
+
+  // 2) BX24.openPath — когда приложение встроено как placement во вкладку карточки.
   try {
     if (typeof BX24 === 'undefined') { try { await loadBX24(); } catch (e) {} }
     if (typeof BX24 !== 'undefined' && typeof BX24.openPath === 'function') {
-      let handled = false;
-      try {
-        BX24.openPath(path, function (res) {
-          // res.result === 'error' → путь не открылся слайдером (напр., вкладка).
-          if (res && res.result === 'error') { handled = false; log('ℹ️ openPath вернул error для ' + path); }
-        });
-        handled = true;
-        log('➡️ Открываю карточку через BX24.openPath: ' + path);
-      } catch (e) { handled = false; log('⚠️ BX24.openPath: ' + e.message); }
-      if (handled) return;
+      BX24.openPath(path, function () {});
+      log('➡️ Карточка открыта через BX24.openPath: ' + path);
+      return;
     }
-  } catch (e) { /* fallthrough */ }
-  // 2) Фолбэк — навигация окна портала (когда BX24 недоступен).
-  const domain = currentDomain || (location.hostname.endsWith('seller24.ru') ? location.hostname : 'crm.seller24.ru');
-  const url = 'https://' + domain + path;
+  } catch (e) { log('⚠️ BX24.openPath: ' + e.message); }
+
+  // 3) Крайний фолбэк — навигация окна портала.
   log('➡️ Фолбэк-навигация на карточку: ' + url);
   try {
     if (window.top && window.top !== window.self) {
@@ -2438,7 +2446,7 @@ function setStatus(msg, type='') {
   el.textContent = msg;
   el.className   = 'status-bar' + (type ? ' '+type : '');
 }
-const BUILD_VERSION = 'shahmatka build 2026-07-30 #60 (контекст сделки — приоритет при сохранении)';
+const BUILD_VERSION = 'shahmatka build 2026-08-05 #61 (открытие карточек: SidePanel + openPath; ТМ→Своя; цвет по статусу)';
 function log(msg) {
   const b = document.getElementById('debug-box');
   b.style.display = 'block';
